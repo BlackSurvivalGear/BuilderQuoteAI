@@ -97,3 +97,137 @@ input[type="range"]::-moz-range-thumb:hover {
     box-shadow: 0 0 12px 2px rgba(212, 175, 55, 0.7);
     pointer-events: none;
 }
+
+/* --- PREMIUM PRINT UTILITIES & PRINT STYLESHEET --- */
+@media print {
+    /* Hide all landing sections, non-essential workspace sections, headers, and footer */
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    header,
+    footer,
+    #landing-sections-container,
+    #landing-page-wrapper,
+    #workspace-tab-ai-settings,
+    .lg:col-span-5,
+    .lg:col-span-7 .border-dashed,
+    .lg:col-span-6,
+    #workspace-upload-zone,
+    #workspace-project-description,
+    button,
+    select,
+    input[type="range"],
+    input[type="checkbox"],
+    input[type="file"],
+    .flex-wrap,
+    th:last-child,
+    td:last-child {
+        display: none !important;
+    }
+
+    /* Keep only active workspace elements */
+    #ai-workspace-section {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #workspace-tab-boq {
+        display: block !important;
+    }
+
+    /* Style Project Details for clean layout */
+    .lg:col-span-5,
+    .lg:col-span-7 {
+        display: block !important;
+        width: 100% !important;
+        float: none !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #000000 !important;
+        margin-bottom: 20px !important;
+    }
+
+    input, textarea {
+        background: transparent !important;
+        border: none !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        font-size: 12px !important;
+        width: auto !important;
+        box-shadow: none !important;
+        pointer-events: none !important;
+    }
+
+    /* Clean black and white table for BOQ printing */
+    #boq-editor-table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+        margin-top: 20px !important;
+        color: #000000 !important;
+    }
+
+    #boq-editor-table th {
+        background-color: #f3f4f6 !important;
+        color: #000000 !important;
+        font-weight: bold !important;
+        border: 1px solid #d1d5db !important;
+        font-size: 10px !important;
+        padding: 6px 10px !important;
+        text-transform: uppercase !important;
+    }
+
+    #boq-editor-table td {
+        border: 1px solid #d1d5db !important;
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        color: #000000 !important;
+    }
+
+    #boq-editor-table input {
+        border: none !important;
+        width: 100% !important;
+        color: #000000 !important;
+        text-align: inherit !important;
+    }
+
+    /* Print Recap card */
+    .lg:col-span-6.bg-brand-gold-muted {
+        display: block !important;
+        width: 100% !important;
+        background: #f9fafb !important;
+        border: 1px solid #d1d5db !important;
+        padding: 15px !important;
+        margin-top: 25px !important;
+        color: #000000 !important;
+        page-break-inside: avoid;
+    }
+
+    .lg:col-span-6.bg-brand-gold-muted div {
+        color: #000000 !important;
+    }
+
+    #calc-grand-total {
+        color: #000000 !important;
+        background: #f3f4f6 !important;
+        border: 1px solid #9ca3af !important;
+        font-size: 18px !important;
+    }
+
+    /* Print Output deliverable */
+    #output-content-wrapper {
+        display: block !important;
+        background: transparent !important;
+        color: #000000 !important;
+        border: 1px solid #d1d5db !important;
+        padding: 20px !important;
+        margin-top: 30px !important;
+        font-size: 12px !important;
+        page-break-inside: avoid;
+    }
+}
