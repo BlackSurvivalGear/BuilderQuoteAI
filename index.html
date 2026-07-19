@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuilderQuoteAI - AI Construction Estimating for Modern Builders</title>
+    <meta name="description" content="Generate professional construction quotations in minutes using intelligent document analysis. Premium AI platform for contractors, builders, and consultants.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            matte: '#0B0B0C',
+                            graphite: '#18181C',
+                            dark: '#121214',
+                            gold: '#D4AF37',
+                            'gold-hover': '#C19E2F',
+                            'gold-muted': 'rgba(212, 175, 55, 0.15)',
+                            'gold-border': 'rgba(212, 175, 55, 0.3)',
+                            glass: 'rgba(24, 24, 28, 0.7)',
+                            'glass-border': 'rgba(255, 255, 255, 0.08)',
+                            'glass-hover': 'rgba(255, 255, 255, 0.03)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'radial-glow': 'radial-gradient(circle at center, rgba(212, 175, 55, 0.12) 0%, transparent 65%)',
+                        'radial-glow-top': 'radial-gradient(circle at top, rgba(212, 175, 55, 0.15) 0%, transparent 70%)',
+                    },
+                    boxShadow: {
+                        'gold-glow': '0 0 25px -5px rgba(212, 175, 55, 0.4)',
+                        'gold-glow-sm': '0 0 15px -3px rgba(212, 175, 55, 0.25)',
+                        'glass-shadow': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-brand-matte text-white antialiased selection:bg-brand-gold selection:text-brand-matte relative min-h-screen overflow-x-hidden">
+
+    <!-- Glowing Radial Background Elements -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[800px] bg-radial-glow-top pointer-events-none z-0"></div>
+    <div class="absolute top-[1200px] right-[-200px] w-[600px] h-[600px] bg-radial-glow pointer-events-none z-0"></div>
+    <div class="absolute bottom-[800px] left-[-200px] w-[600px] h-[600px] bg-radial-glow pointer-events-none z-0"></div>
+
+    <!-- Header / Navigation -->
+    <header class="sticky top-0 z-50 w-full bg-brand-glass backdrop-blur-md border-b border-brand-glass-border transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo with fallback logic -->
+                <div class="flex-shrink-0 flex items-center">
+                    <a href="#" class="flex items-center gap-3 group">
+                        <div id="logo-container" class="h-10 flex items-center">
+                            <!-- JS will inject fallback text logo if image fails -->
+                            <img id="brand-logo" src="images/BuilderQuoteAI.png" alt="BuilderQuoteAI Logo" class="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-105" onerror="handleLogoError()">
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-sm font-medium text-gray-300 hover:text-brand-gold transition-colors duration-200">Home</a>
+                    <a href="#features" class="text-sm font-medium text-gray-300 hover:text-brand-gold transition-colors duration-200">Features</a>
+                    <a href="#pricing" class="text-sm font-medium text-gray-300 hover:text-brand-gold transition-colors duration-200">Pricing</a>
+                    <a href="#about" class="text-sm font-medium text-gray-300 hover:text-brand-gold transition-colors duration-200">About</a>
+                    <a href="#contact" class="text-sm font-medium text-gray-300 hover:text-brand-gold transition-colors duration-200">Contact</a>
+                </nav>
+
+                <!-- Navigation CTAs -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="#contact" class="px-5 py-2 text-sm font-semibold rounded-lg bg-transparent border border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10 hover:border-brand-gold transition-all duration-300">
+                        Request Demo
+                    </a>
+                    <a href="#pricing" class="px-5 py-2 text-sm font-semibold rounded-lg bg-brand-gold text-brand-matte hover:bg-brand-gold-hover hover:shadow-gold-glow transition-all duration-300">
+                        Get Started
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-brand-glass-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-gold transition-all" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i data-lucide="menu" id="menu-icon" class="h-6 w-6"></i>
+                        <i data-lucide="x" id="close-icon" class="h-6 w-6 hidden"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-brand-matte/95 backdrop-blur-lg border-b border-brand-glass-border">
+            <div class="px-2 pt-2 pb-4 space-y-1 sm:px-3">
+                <a href="#" class="mobile-nav-link block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-brand-gold hover:bg-brand-glass-hover transition-all">Home</a>
+                <a href="#features" class="mobile-nav-link block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-brand-gold hover:bg-brand-glass-hover transition-all">Features</a>
+                <a href="#pricing" class="mobile-nav-link block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-brand-gold hover:bg-brand-glass-hover transition-all">Pricing</a>
+                <a href="#about" class="mobile-nav-link block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-brand-gold hover:bg-brand-glass-hover transition-all">About</a>
+                <a href="#contact" class="mobile-nav-link block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-brand-gold hover:bg-brand-glass-hover transition-all">Contact</a>
+                <div class="pt-4 pb-2 border-t border-brand-glass-border flex flex-col gap-3 px-3">
+                    <a href="#contact" class="w-full text-center py-2.5 rounded-lg bg-transparent border border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10 transition-all font-semibold">
+                        Request Demo
+                    </a>
+                    <a href="#pricing" class="w-full text-center py-2.5 rounded-lg bg-brand-gold text-brand-matte hover:bg-brand-gold-hover hover:shadow-gold-glow transition-all font-semibold">
+                        Get Started
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative z-10">
+
+        <!-- Hero Section -->
+        <section class="relative pt-12 pb-24 md:pt-20 md:pb-32 overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+
+                    <!-- Left Hero Content -->
+                    <div class="lg:col-span-7 space-y-8 text-center lg:text-left">
+                        <!-- Badge -->
+                        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-xs font-semibold tracking-wider uppercase animate-pulse">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            Next-Gen Estimation Suite v2.4
+                        </div>
+
+                        <!-- Headline -->
+                        <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">
+                            AI Construction <span class="bg-gradient-to-r from-brand-gold via-[#FFF1C5] to-brand-gold bg-clip-text text-transparent drop-shadow-sm">Estimating</span> for Modern Builders
+                        </h1>
+
+                        <!-- Subtitle -->
+                        <p class="text-lg md:text-xl text-gray-400 font-light max-w-2xl mx-auto lg:mx-0">
+                            Generate professional construction quotations in minutes using intelligent document analysis. Say goodbye to tedious manual surveys.
+                        </p>
+
+                        <!-- Actions -->
+                        <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                            <a href="#pricing" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-brand-gold text-brand-matte hover:bg-brand-gold-hover font-bold text-center hover:shadow-gold-glow transition-all duration-300 flex items-center justify-center gap-2.5">
+                                Get Started Free
+                                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                            </a>
+                            <button onclick="triggerDemoAnimation()" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-brand-graphite/40 border border-brand-glass-border text-gray-300 hover:text-white hover:bg-brand-glass-hover font-bold text-center transition-all duration-300 flex items-center justify-center gap-2.5">
+                                <i data-lucide="play" class="w-5 h-5 text-brand-gold"></i>
+                                View Demo
+                            </button>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="pt-8 grid grid-cols-3 gap-4 sm:gap-8 border-t border-brand-glass-border max-w-lg mx-auto lg:mx-0">
+                            <div>
+                                <p class="text-2xl sm:text-3xl font-extrabold text-brand-gold">10x</p>
+                                <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">Faster Estimations</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl sm:text-3xl font-extrabold text-white">99.8%</p>
+                                <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">AI Survey Accuracy</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl sm:text-3xl font-extrabold text-white">£4.2B+</p>
+                                <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">Estimates Generated</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Hero Content - Interactive Dashboard Sandbox Mock -->
+                    <div class="lg:col-span-5">
+                        <div class="relative mx-auto max-w-md lg:max-w-none">
+                            <!-- Background glow for dashboard -->
+                            <div class="absolute -inset-1.5 bg-gradient-to-r from-brand-gold to-[#A28321] rounded-2xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+
+                            <!-- Dashboard Card Frame -->
+                            <div class="relative bg-brand-graphite border border-brand-glass-border shadow-glass-shadow rounded-2xl overflow-hidden">
+                                <!-- Top Bar -->
+                                <div class="bg-[#1e1e24] px-4 py-3 border-b border-brand-glass-border flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                                        <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                                        <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                                        <span class="text-xs text-gray-400 font-mono ml-2">builderquote-ai-sandbox</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                                        <span class="text-[10px] text-green-400 uppercase tracking-wider font-mono">Live Engine</span>
+                                    </div>
+                                </div>
+
+                                <!-- Main Panel -->
+                                <div class="p-6 space-y-6">
+                                    <!-- Dynamic Upload / Process Simulation Box -->
+                                    <div id="demo-box" class="border-2 border-dashed border-brand-gold/30 hover:border-brand-gold/60 rounded-xl p-6 text-center cursor-pointer transition-all duration-300 bg-brand-matte/40 group relative overflow-hidden" onclick="startSurveyScanning()">
+
+                                        <!-- Document Scanning Overlay (Hidden initially, animated with Tailwind/CSS via script) -->
+                                        <div id="scanning-overlay" class="absolute inset-0 bg-brand-matte/90 flex flex-col items-center justify-center p-4 transition-all duration-500 scale-95 opacity-0 pointer-events-none">
+                                            <div class="relative w-full max-w-[200px] h-1 bg-brand-graphite rounded-full overflow-hidden mb-4">
+                                                <div id="scanning-progress-bar" class="absolute top-0 left-0 h-full w-0 bg-gradient-to-r from-brand-gold to-white rounded-full transition-all duration-700 ease-out"></div>
+                                            </div>
+                                            <p class="text-xs font-mono text-brand-gold mb-1" id="scanning-step-text">Reading Architectural PDF...</p>
+                                            <p class="text-[10px] font-mono text-gray-500" id="scanning-sub-text">Extracting Bill of Quantities</p>
+                                        </div>
+
+                                        <!-- Default Drag & Drop View -->
+                                        <div id="demo-default-view" class="space-y-3">
+                                            <div class="mx-auto w-12 h-12 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold group-hover:scale-110 transition-transform duration-300">
+                                                <i data-lucide="file-up" class="w-6 h-6"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-semibold">Drop Architectural Blueprints</p>
+                                                <p class="text-xs text-gray-400 mt-1">Supports PDF, DWG, CAD or Images</p>
+                                            </div>
+                                            <button class="px-4 py-2 rounded-lg bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-xs font-semibold hover:bg-brand-gold hover:text-brand-matte transition-all duration-300">
+                                                Simulate Upload
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estimation Outputs Box -->
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Real-Time Estimator</h3>
+                                            <span class="text-[11px] text-brand-gold font-semibold" id="calculation-status">Ready</span>
+                                        </div>
+
+                                        <!-- Estimator Sliders / Controls -->
+                                        <div class="bg-brand-matte/60 border border-brand-glass-border rounded-xl p-4 space-y-4">
+                                            <div>
+                                                <div class="flex justify-between text-xs mb-1.5 font-medium">
+                                                    <span class="text-gray-400">Total Floor Area (sq m)</span>
+                                                    <span id="area-val" class="text-brand-gold font-mono font-bold">180</span>
+                                                </div>
+                                                <input id="area-slider" type="range" min="50" max="1000" value="180" class="w-full accent-brand-gold bg-brand-graphite rounded-lg appearance-none h-1.5 cursor-pointer" oninput="updateEstimatorValues()">
+                                            </div>
+
+                                            <div>
+                                                <div class="flex justify-between text-xs mb-1.5 font-medium">
+                                                    <span class="text-gray-400">Construction Grade</span>
+                                                    <span id="grade-val" class="text-brand-gold font-bold">Premium</span>
+                                                </div>
+                                                <div class="grid grid-cols-3 gap-2">
+                                                    <button onclick="setEstimateGrade('Standard', 1350)" class="grade-btn border border-brand-glass-border bg-brand-matte py-1 text-[10px] font-semibold rounded text-gray-400 hover:text-white hover:border-gray-500 transition-all">Standard</button>
+                                                    <button onclick="setEstimateGrade('Premium', 1850)" class="grade-btn border border-brand-gold/60 bg-brand-gold-muted py-1 text-[10px] font-bold rounded text-brand-gold transition-all">Premium</button>
+                                                    <button onclick="setEstimateGrade('Luxury', 2800)" class="grade-btn border border-brand-glass-border bg-brand-matte py-1 text-[10px] font-semibold rounded text-gray-400 hover:text-white hover:border-gray-500 transition-all">Luxury</button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Estimation Result Card -->
+                                        <div class="bg-brand-gold-muted/30 border border-brand-gold-border rounded-xl p-4 flex items-center justify-between">
+                                            <div class="space-y-1">
+                                                <p class="text-xs text-gray-400">Estimated Project Valuation</p>
+                                                <p class="text-2xl font-extrabold text-white tracking-tight" id="estimated-total">£333,000</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-[10px] text-gray-400">Quantity Surveyor Fees Saved</p>
+                                                <p class="text-xs font-bold text-brand-gold">~ £6,660</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-24 border-t border-brand-glass-border relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+                <!-- Section Header -->
+                <div class="text-center max-w-3xl mx-auto mb-20 space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-xs font-semibold tracking-wider uppercase">
+                        Enterprise Capabilities
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+                        Engineered for High-Precision Estimating
+                    </h2>
+                    <p class="text-lg text-gray-400 font-light">
+                        Discover 10 revolutionary, AI-powered modules designed specifically for builders, quantity surveyors, and project managers.
+                    </p>
+                </div>
+
+                <!-- Features Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                    <!-- Card 1: AI Quantity Surveyor -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="calculator" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">AI Quantity Surveyor</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Simulate physical quantity takeoffs from structural blueprints instantly, reducing weeks of tedious measurements to mere seconds.
+                        </p>
+                    </div>
+
+                    <!-- Card 2: BOQ Generator -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="file-text" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">BOQ Generator</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Export highly detailed and fully customized Bills of Quantities compliant with modern industrial standards (NRM2 & SMM7).
+                        </p>
+                    </div>
+
+                    <!-- Card 3: Material Estimator -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="package" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Material Estimator</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Automatically calculate raw concrete, steel weight, bricks, wiring, and timber loads with real-time dynamic market pricing.
+                        </p>
+                    </div>
+
+                    <!-- Card 4: Labour Calculator -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="users" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Labour Calculator</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Estimate craft hour rates and total labour costs across various trades, including electricians, bricklayers, plumbers and joiners.
+                        </p>
+                    </div>
+
+                    <!-- Card 5: Cost Database -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="database" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Cost Database</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Gain access to our premium, regionally-indexed cost master database containing over 50,000 active trade items.
+                        </p>
+                    </div>
+
+                    <!-- Card 6: Tender Assistant -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="award" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Tender Assistant</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Analyze tender conditions and specifications automatically. Build competitive, error-free margins to win lucrative commercial bids.
+                        </p>
+                    </div>
+
+                    <!-- Card 7: Project Timeline -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="calendar-days" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Project Timeline</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Generate automated project critical paths and realistic Gantt chart milestones based on real material procurement and labor.
+                        </p>
+                    </div>
+
+                    <!-- Card 8: Risk Analysis -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Risk Analysis</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Identify pricing anomalies, missing material constraints, and potential supply-chain delays with smart statistical predictions.
+                        </p>
+                    </div>
+
+                    <!-- Card 9: Document Intelligence -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Document Intelligence</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">
+                            Analyze architectural drawings, specifications, and layout blueprints instantly with advanced visual-linguistic AI algorithms.
+                        </p>
+                    </div>
+
+                    <!-- Card 10: Client Reports -->
+                    <div class="group relative bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 hover:border-brand-gold-border hover:shadow-glass-shadow transition-all duration-300 hover:-translate-y-1.5 overflow-hidden md:col-span-2 lg:col-span-3">
+                        <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-brand-gold-muted rounded-full blur-2xl group-hover:bg-brand-gold/10 transition-all duration-300"></div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-brand-gold group-hover:text-brand-matte transition-all duration-300">
+                            <i data-lucide="file-check" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-3 group-hover:text-brand-gold transition-colors">Client Reports</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed max-w-2xl">
+                            Export ultra-premium, white-labeled PDF quotes complete with your organization's custom branding, clear material visual breakdown, terms and conditions, and digital signatures.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="pricing" class="py-24 border-t border-brand-glass-border relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+                <!-- Section Header -->
+                <div class="text-center max-w-3xl mx-auto mb-16 space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-xs font-semibold tracking-wider uppercase">
+                        Transparent Pricing
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+                        Tailored for Every Scale of Construction
+                    </h2>
+                    <p class="text-lg text-gray-400 font-light">
+                        Select a premium plan that fits your estimation volume. Save over 30% with an annual billing cycle.
+                    </p>
+
+                    <!-- Toggle Button Container -->
+                    <div class="pt-6 flex justify-center items-center gap-4">
+                        <span id="label-monthly" class="text-sm font-semibold text-white transition-colors">Monthly</span>
+                        <button id="billing-toggle" type="button" class="relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full border-2 border-brand-gold/30 bg-brand-graphite transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2 focus:ring-offset-brand-matte" role="switch" aria-checked="false">
+                            <span id="toggle-knob" aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-brand-gold shadow ring-0 transition duration-300 ease-in-out translate-x-0"></span>
+                        </button>
+                        <span id="label-annual" class="text-sm font-semibold text-gray-400 transition-colors flex items-center gap-1.5">
+                            Annual
+                            <span class="text-[10px] bg-brand-gold-muted border border-brand-gold-border text-brand-gold px-1.5 py-0.5 rounded font-bold">Save 30%</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Pricing Plan Cards Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+
+                    <!-- Starter Plan -->
+                    <div class="bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 flex flex-col justify-between hover:border-gray-700 transition-all duration-300">
+                        <div>
+                            <div class="mb-6">
+                                <h3 class="text-lg font-bold text-gray-400 tracking-wider uppercase">Starter</h3>
+                                <p class="text-sm text-gray-400 mt-1">Ideal for small builders and specialist trades.</p>
+                            </div>
+                            <div class="mb-8 flex items-baseline">
+                                <span class="text-sm font-bold text-brand-gold">£</span>
+                                <span id="price-starter" class="text-5xl font-extrabold text-white tracking-tight transition-all duration-300">79</span>
+                                <span class="text-sm text-gray-400 ml-1">/ mo</span>
+                            </div>
+                            <ul class="space-y-4 mb-8">
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Up to 5 Estimations / Month</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Material Takeoffs & BOQs</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Regional Cost Database access</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300/40">
+                                    <i data-lucide="x" class="w-5 h-5 text-gray-600 shrink-0"></i>
+                                    <span>Full AI Document Analysis (PDF/CAD)</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300/40">
+                                    <i data-lucide="x" class="w-5 h-5 text-gray-600 shrink-0"></i>
+                                    <span>White-labeled reports</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <button onclick="subscribePlan('Starter')" class="w-full py-3.5 px-4 rounded-xl border border-brand-gold/50 text-brand-gold bg-brand-gold-muted hover:bg-brand-gold hover:text-brand-matte font-bold transition-all duration-300">
+                            Choose Starter
+                        </button>
+                    </div>
+
+                    <!-- Professional Plan (Popular / Gold Highlight) -->
+                    <div class="relative bg-brand-graphite border-2 border-brand-gold shadow-gold-glow rounded-2xl p-8 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300">
+                        <div class="absolute top-0 right-8 -translate-y-1/2 bg-brand-gold text-brand-matte text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            Most Popular
+                        </div>
+                        <div>
+                            <div class="mb-6">
+                                <h3 class="text-lg font-extrabold text-brand-gold tracking-wider uppercase">Professional</h3>
+                                <p class="text-sm text-gray-400 mt-1">Perfect for fast-growing residential and commercial contractors.</p>
+                            </div>
+                            <div class="mb-8 flex items-baseline">
+                                <span class="text-sm font-bold text-brand-gold">£</span>
+                                <span id="price-professional" class="text-5xl font-extrabold text-white tracking-tight transition-all duration-300">199</span>
+                                <span class="text-sm text-gray-400 ml-1">/ mo</span>
+                            </div>
+                            <ul class="space-y-4 mb-8">
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span class="font-semibold text-white">Unlimited Estimations</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>AI Blueprint Analysis & Document Takeoff</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Premium BOQ Generator with Custom Rates</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>White-labeled Premium Reports</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Integrations (Excel, Bluebeam, Procore)</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <button onclick="subscribePlan('Professional')" class="w-full py-3.5 px-4 rounded-xl bg-brand-gold text-brand-matte hover:bg-brand-gold-hover hover:shadow-gold-glow-sm font-bold transition-all duration-300">
+                            Choose Professional
+                        </button>
+                    </div>
+
+                    <!-- Enterprise Plan -->
+                    <div class="bg-brand-graphite border border-brand-glass-border rounded-2xl p-8 flex flex-col justify-between hover:border-gray-700 transition-all duration-300">
+                        <div>
+                            <div class="mb-6">
+                                <h3 class="text-lg font-bold text-gray-400 tracking-wider uppercase">Enterprise</h3>
+                                <p class="text-sm text-gray-400 mt-1">For regional builders, large consultants, and developers.</p>
+                            </div>
+                            <div class="mb-8 flex items-baseline">
+                                <span class="text-5xl font-extrabold text-white tracking-tight">Custom</span>
+                            </div>
+                            <ul class="space-y-4 mb-8">
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Multi-User License & Shared Workspaces</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Custom Cost Database Integrations</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Dedicated AI model training & custom rules</span>
+                                </li>
+                                <li class="flex items-start gap-3 text-sm text-gray-300">
+                                    <i data-lucide="check" class="w-5 h-5 text-brand-gold shrink-0"></i>
+                                    <span>Dedicated Account Manager & SLA support</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <a href="#contact" class="w-full text-center py-3.5 px-4 rounded-xl border border-brand-glass-border hover:bg-brand-glass-hover text-white font-bold transition-all duration-300">
+                            Contact Sales
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="py-24 border-t border-brand-glass-border relative overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+
+                    <!-- Left Side - Content -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-xs font-semibold tracking-wider uppercase">
+                            Who We Are
+                        </div>
+                        <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight">
+                            The Pinnacle of AI Construction Estimating
+                        </h2>
+                        <p class="text-lg text-gray-300 font-light leading-relaxed">
+                            <strong class="text-brand-gold font-semibold">BuilderQuoteAI</strong> was forged to bridge the gap between traditional engineering accuracy and state-of-the-art AI. We utilize visual-linguistic AI to interpret architectural drawings, generate complete Bills of Quantities, and automate estimates with unprecedented speed.
+                        </p>
+
+                        <!-- Highlights list -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                            <div class="flex gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold shrink-0">
+                                    <i data-lucide="award" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white">Quantity Surveying</h4>
+                                    <p class="text-xs text-gray-400 mt-1">Conforming to professional standard auditing rules.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold shrink-0">
+                                    <i data-lucide="wrench" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white">Contractors & Builders</h4>
+                                    <p class="text-xs text-gray-400 mt-1">Tailor estimates to your specific site wages & waste factors.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold shrink-0">
+                                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white">Tender Consultants</h4>
+                                    <p class="text-xs text-gray-400 mt-1">Scale bid volumes and capture errors before submission.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold shrink-0">
+                                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white">Architects & Developers</h4>
+                                    <p class="text-xs text-gray-400 mt-1">Track budgetary targets at schematic design phases.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side - Interactive Mission & Architecture Mockup -->
+                    <div class="lg:col-span-5 bg-brand-graphite border border-brand-glass-border shadow-glass-shadow rounded-2xl p-8 space-y-6 relative">
+                        <div class="absolute -right-12 -top-12 w-32 h-32 bg-brand-gold-muted/40 rounded-full blur-3xl"></div>
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="workflow" class="w-5 h-5 text-brand-gold"></i>
+                            Algorithmic Blueprint Breakdown
+                        </h3>
+
+                        <!-- Mini step guide -->
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-4 p-3 bg-brand-matte/50 rounded-xl border border-brand-glass-border">
+                                <span class="bg-brand-gold text-brand-matte text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0">1</span>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Visual Scanning</p>
+                                    <p class="text-xs text-gray-400">Our deep vision neural network isolates walls, partitions, and doors.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-4 p-3 bg-brand-matte/50 rounded-xl border border-brand-glass-border">
+                                <span class="bg-brand-gold text-brand-matte text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0">2</span>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Itemization & Standards Mapping</p>
+                                    <p class="text-xs text-gray-400">Elements mapped according to standard rules of measurement.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-4 p-3 bg-brand-matte/50 rounded-xl border border-brand-glass-border">
+                                <span class="bg-brand-gold text-brand-matte text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0">3</span>
+                                <div>
+                                    <p class="text-sm font-bold text-white">Dynamic Pricing Engine</p>
+                                    <p class="text-xs text-gray-400">Localized trade labor and raw material indices are applied.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <div class="flex justify-between items-center text-xs text-gray-400">
+                                <span>Engine status:</span>
+                                <span class="text-green-400 font-semibold flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-ping"></span>
+                                    Operational
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="py-24 border-t border-brand-glass-border relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start max-w-6xl mx-auto">
+
+                    <!-- Left Side Details -->
+                    <div class="lg:col-span-5 space-y-6">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-xs font-semibold tracking-wider uppercase">
+                            Connect with us
+                        </div>
+                        <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                            Accelerate Your Estimations Today
+                        </h2>
+                        <p class="text-gray-400 font-light leading-relaxed">
+                            Have questions about our AI algorithm, enterprise custom database integrations, or license plans? Reach out to our specialist Quantity Surveying support team.
+                        </p>
+
+                        <div class="space-y-4 pt-4">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i>
+                                <span class="text-gray-300 text-sm">support@builderquoteai.com</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i>
+                                <span class="text-gray-300 text-sm">Mayfair, London, W1S 1AR</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="clock" class="w-5 h-5 text-brand-gold"></i>
+                                <span class="text-gray-300 text-sm">Response Time: &lt; 15 mins</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Form Card -->
+                    <div class="lg:col-span-7 bg-brand-graphite border border-brand-glass-border shadow-glass-shadow rounded-2xl p-8 relative">
+                        <form id="contact-form" class="space-y-6" onsubmit="handleFormSubmit(event)">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label for="form-name" class="block text-xs font-bold text-gray-400 uppercase tracking-wider">Your Name</label>
+                                    <input type="text" id="form-name" name="name" required class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors" placeholder="e.g. John Doe">
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="form-company" class="block text-xs font-bold text-gray-400 uppercase tracking-wider">Company Name</label>
+                                    <input type="text" id="form-company" name="company" required class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors" placeholder="e.g. Acme Construction">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="form-email" class="block text-xs font-bold text-gray-400 uppercase tracking-wider">Email Address</label>
+                                <input type="email" id="form-email" name="email" required class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors" placeholder="john@acme.com">
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="form-message" class="block text-xs font-bold text-gray-400 uppercase tracking-wider">Project Estimating Requirements</label>
+                                <textarea id="form-message" name="message" rows="4" required class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors resize-none" placeholder="Tell us about the project types you tender or manage..."></textarea>
+                            </div>
+
+                            <button type="submit" class="w-full py-4 px-6 rounded-xl bg-brand-gold text-brand-matte hover:bg-brand-gold-hover hover:shadow-gold-glow font-bold transition-all duration-300 flex items-center justify-center gap-2">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Success Toast (Hidden by default, triggered on actions) -->
+    <div id="toast" class="fixed bottom-8 right-8 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-500 ease-out bg-brand-graphite border border-brand-gold shadow-gold-glow rounded-xl px-5 py-4 max-w-sm flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-brand-gold-muted border border-brand-gold-border text-brand-gold flex items-center justify-center shrink-0">
+            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+        </div>
+        <div>
+            <h4 class="font-bold text-white text-sm" id="toast-title">Notification</h4>
+            <p class="text-xs text-gray-400 mt-0.5" id="toast-message">Action completed successfully.</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-brand-matte border-t border-brand-glass-border py-12 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+                <!-- Branding -->
+                <div class="text-center md:text-left space-y-2">
+                    <div id="footer-logo-container" class="h-8 flex items-center justify-center md:justify-start">
+                        <!-- Logo with fallback logic -->
+                        <img id="brand-footer-logo" src="images/BuilderQuoteAI.png" alt="BuilderQuoteAI" class="h-7 w-auto object-contain" onerror="handleFooterLogoError()">
+                    </div>
+                    <p class="text-xs text-gray-500 font-light">Next-Generation AI Estimating & Bill of Quantities Platform</p>
+                </div>
+
+                <!-- Footer Nav Links -->
+                <div class="flex flex-wrap justify-center gap-6 md:gap-8 text-xs font-semibold text-gray-400">
+                    <a href="#" class="hover:text-brand-gold transition-colors">Home</a>
+                    <a href="#features" class="hover:text-brand-gold transition-colors">Features</a>
+                    <a href="#pricing" class="hover:text-brand-gold transition-colors">Pricing</a>
+                    <a href="#" class="hover:text-brand-gold transition-colors">Privacy Policy</a>
+                    <a href="#" class="hover:text-brand-gold transition-colors">Terms of Service</a>
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="hover:text-brand-gold transition-colors flex items-center gap-1">
+                        <i data-lucide="github" class="w-3.5 h-3.5"></i>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-brand-glass-border/40 my-8"></div>
+
+            <!-- Copyright info -->
+            <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 gap-4">
+                <p>&copy; <span id="current-year"></span> BuilderQuoteAI. All rights reserved.</p>
+                <p class="flex items-center gap-1.5 font-mono">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse"></span>
+                    Sovereign Estimate Engine v2.4
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Custom App JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>
