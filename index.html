@@ -202,6 +202,23 @@
                                     <option value="NGN">NGN (₦) - Nigerian Naira</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Regional Pricing Profile</label>
+                                <select id="project-region" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors">
+                                    <option value="London">London (Base Rate x1.30)</option>
+                                    <option value="South East England">South East England (Base Rate x1.15)</option>
+                                    <option value="South West England">South West England (Base Rate x1.00)</option>
+                                    <option value="East of England">East of England (Base Rate x1.05)</option>
+                                    <option value="East Midlands">East Midlands (Base Rate x0.95)</option>
+                                    <option value="West Midlands">West Midlands (Base Rate x0.98)</option>
+                                    <option value="North West England">North West England (Base Rate x0.96)</option>
+                                    <option value="North East England">North East England (Base Rate x0.90)</option>
+                                    <option value="Yorkshire & Humber">Yorkshire & Humber (Base Rate x0.92)</option>
+                                    <option value="Wales">Wales (Base Rate x0.91)</option>
+                                    <option value="Scotland">Scotland (Base Rate x1.02)</option>
+                                    <option value="Northern Ireland">Northern Ireland (Base Rate x0.88)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -515,51 +532,31 @@
                             <div id="ai-progress-checklist" class="space-y-3 text-xs">
                                 <div id="step-0" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Reading uploaded documents</span>
+                                    <span>Connecting...</span>
                                 </div>
                                 <div id="step-1" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Analysing project information</span>
+                                    <span>Uploading...</span>
                                 </div>
                                 <div id="step-2" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Detecting trade packages</span>
+                                    <span>Analysing...</span>
                                 </div>
                                 <div id="step-3" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Measuring quantities</span>
+                                    <span>Calculating...</span>
                                 </div>
                                 <div id="step-4" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Generating Bill of Quantities</span>
+                                    <span>Generating BOQ...</span>
                                 </div>
                                 <div id="step-5" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Calculating material costs</span>
+                                    <span>Preparing quotation...</span>
                                 </div>
                                 <div id="step-6" class="flex items-center gap-2.5 text-gray-400">
                                     <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Calculating labour costs</span>
-                                </div>
-                                <div id="step-7" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Calculating plant costs</span>
-                                </div>
-                                <div id="step-8" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Applying profit margins</span>
-                                </div>
-                                <div id="step-9" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Applying VAT</span>
-                                </div>
-                                <div id="step-10" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Producing quotation</span>
-                                </div>
-                                <div id="step-11" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Finished</span>
+                                    <span>Completed.</span>
                                 </div>
                             </div>
                         </div>
@@ -610,14 +607,52 @@
                             </div>
                         </div>
 
-                        <!-- Provider Info & Token details (Hidden elements kept to avoid JS crashes) -->
-                        <div class="hidden">
-                            <span id="console-provider">Simulated Local Core</span>
-                            <span id="console-model">Sovereign-Llama3-8B</span>
-                            <pre id="console-prompt-sent">No prompt sent yet.</pre>
-                            <pre id="console-response-raw">Awaiting generative trigger...</pre>
-                            <span id="console-rt">-- ms</span>
-                            <span id="console-tokens">-- tok</span>
+                        <!-- Expandable Developer Diagnostics Panel (AI Response Panel) -->
+                        <div class="border-t border-brand-glass-border/40 pt-4 space-y-2">
+                            <button type="button" onclick="toggleDeveloperPanel()" class="w-full flex items-center justify-between text-xs font-bold text-gray-400 hover:text-white uppercase tracking-wider transition-colors">
+                                <span class="flex items-center gap-1.5">
+                                    <i data-lucide="terminal" class="w-4 h-4 text-brand-gold"></i>
+                                    AI Response Panel & Diagnostics
+                                </span>
+                                <i data-lucide="chevron-down" id="dev-panel-chevron" class="w-4 h-4 transition-transform duration-200"></i>
+                            </button>
+
+                            <div id="developer-diagnostic-panel" class="hidden bg-brand-matte/60 border border-brand-glass-border/40 rounded-lg p-3 space-y-2.5 font-mono text-[10px] text-gray-400 overflow-y-auto max-h-[220px]">
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>Selected Provider:</span>
+                                    <span id="console-provider" class="text-white font-bold">Simulated Local Core</span>
+                                </div>
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>Selected Model:</span>
+                                    <span id="console-model" class="text-white font-bold">Sovereign-Llama3-8B</span>
+                                </div>
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>AI Status:</span>
+                                    <span id="console-panel-status" class="text-green-400 font-bold">IDLE</span>
+                                </div>
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>Request Time:</span>
+                                    <span id="console-request-time" class="text-white font-bold">--</span>
+                                </div>
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>Response Time:</span>
+                                    <span id="console-rt" class="text-brand-gold font-bold">-- ms</span>
+                                </div>
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>Token Usage:</span>
+                                    <span id="console-tokens" class="text-white font-bold">-- tok</span>
+                                </div>
+                                <div class="flex justify-between border-b border-brand-glass-border/15 pb-1">
+                                    <span>JSON Validation:</span>
+                                    <span id="console-json-valid" class="text-green-400 font-bold">✓ Valid JSON</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <span>AI Response Body (Raw Segment):</span>
+                                    <pre id="console-response-raw" class="bg-brand-matte/90 p-2 rounded border border-brand-glass-border/20 text-[9px] text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-[100px]">Awaiting generative trigger...</pre>
+                                </div>
+                                <!-- Kept hidden element to avoid any other legacy script reference issues -->
+                                <pre id="console-prompt-sent" class="hidden">No prompt sent yet.</pre>
+                            </div>
                         </div>
                     </div>
 
