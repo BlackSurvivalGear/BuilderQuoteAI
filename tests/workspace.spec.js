@@ -130,6 +130,10 @@ test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
         // Navigate to Workspace
         await page.locator('#nav-workspace-btn').click();
 
+        // Trigger loading sample project description (auto-populates files)
+        const loadSampleBtn = page.locator('text=Load Sample Project Description');
+        await loadSampleBtn.click();
+
         // Click Generate Professional Quote
         const generateBtn = page.locator('#generate-quote-btn');
         await generateBtn.click();
