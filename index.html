@@ -278,6 +278,99 @@
                     </div>
                 </div>
 
+                <!-- Document Register & Project Readiness Summary -->
+                <div id="document-register-section" class="bg-brand-graphite border border-brand-glass-border rounded-xl p-6 space-y-6 hidden">
+                    <div class="flex items-center gap-3 border-b border-brand-glass-border pb-4">
+                        <div class="w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold">
+                            <i data-lucide="folder-check" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">Document Register & Project Readiness</h2>
+                            <p class="text-xs text-gray-400">Intelligent Quantity Surveyor review of the uploaded tender package.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                        <!-- Project Readiness Summary (5 cols) -->
+                        <div class="lg:col-span-5 bg-brand-matte/40 border border-brand-glass-border/60 rounded-xl p-5 space-y-4 flex flex-col justify-between">
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Project Readiness</h3>
+                                    <span id="readiness-status-badge" class="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 font-mono">PROJECT READY</span>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <p class="text-xs text-gray-400">The Tender Package has been analyzed. Checklists indicate document availability:</p>
+                                    <div class="grid grid-cols-2 gap-2 text-xs font-medium" id="readiness-found-checklist">
+                                        <!-- Checkboxes list -->
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1.5 pt-2" id="readiness-missing-box">
+                                    <p class="text-xs font-bold text-yellow-400 flex items-center gap-1.5">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                        Missing / Incomplete Information
+                                    </p>
+                                    <ul class="list-disc pl-5 text-[11px] text-gray-400 space-y-1" id="readiness-missing-list">
+                                        <!-- Missing items -->
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-brand-glass-border/30 pt-3 flex items-center justify-between">
+                                <span class="text-xs text-gray-500 uppercase font-mono">Estimated Readiness</span>
+                                <span id="readiness-confidence-score" class="text-lg font-black text-brand-gold">96%</span>
+                            </div>
+                        </div>
+
+                        <!-- Document Relationships Flow Graph (7 cols) -->
+                        <div class="lg:col-span-7 bg-brand-matte/40 border border-brand-glass-border/60 rounded-xl p-5 space-y-4 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i data-lucide="git-branch" class="w-4 h-4 text-brand-gold"></i>
+                                    Intelligent Document Relationships
+                                </h3>
+                                <p class="text-xs text-gray-400">AI cross-referencing and trace graph constructed internally across your drawings, schedules, and specs.</p>
+                            </div>
+
+                            <!-- Styled Flowchart -->
+                            <div class="p-4 bg-brand-graphite/40 border border-brand-glass-border/40 rounded-xl overflow-x-auto">
+                                <div class="flex items-center justify-around min-w-[500px] py-2 text-center" id="relationships-graph-container">
+                                    <!-- Dynamic Flowchart Nodes -->
+                                </div>
+                            </div>
+
+                            <p class="text-[10px] text-gray-500 font-mono leading-tight">✓ Verification complete: Drawing elements cross-checked against window schedules, finishes schedules, and structural calculation chapters.</p>
+                        </div>
+                    </div>
+
+                    <!-- Permanent Document Register Table -->
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="table" class="w-4 h-4 text-brand-gold"></i>
+                            Permanent Document Register
+                        </h3>
+                        <div class="overflow-x-auto border border-brand-glass-border/30 rounded-xl bg-brand-matte/20">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-brand-matte/80 border-b border-brand-glass-border text-[10px] text-gray-400 font-bold uppercase">
+                                        <th class="p-3">AI Classification</th>
+                                        <th class="p-3">File Name</th>
+                                        <th class="p-3">Drawing No.</th>
+                                        <th class="p-3 text-center">Pages</th>
+                                        <th class="p-3 text-center">Revision</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-right">Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="document-register-tbody" class="divide-y divide-brand-glass-border/20 text-gray-300">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- AI Project Review Panel -->
                 <div class="bg-brand-graphite border border-brand-glass-border rounded-xl p-6 space-y-6" id="ai-project-review-panel">
                     <div class="flex items-center gap-3 border-b border-brand-glass-border pb-4">
