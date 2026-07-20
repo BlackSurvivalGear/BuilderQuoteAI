@@ -161,4 +161,47 @@ test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
         await expect(exportJsonBtn).toBeVisible();
     });
 
+    test('should skip drawing-interpreter when only specification is supplied', async ({ page }) => {
+        // Navigate to Workspace
+        await page.locator('#nav-workspace-btn').click();
+
+        // Reset or upload only a specification
+        await page.evaluate(() => {
+            uploadedFiles = [
+                { id: 'f-spec', name: 'tender_specification_rev_A.pdf', size: 4500000, formattedSize: '4.29 MB', type: 'spec', pages: 12, processingStatus: 'Analysis Complete', confidenceScore: 95, classification: "Specifications", revision: "Rev A", drawingNumber: "" }
+            ];
+            renderUploadedFilesList();
+            renderDocumentRegisterAndReadiness();
+            saveWorkspaceToLocalStorage();
+        });
+
+        // Verify Document Register is visible and has categorized the file as Specifications
+        const registerSection = page.locator('#document-register-section');
+        await expect(registerSection).toBeVisible();
+        await expect(registerSection).toContainText('Specifications');
+        await expect(registerSection).toContainText('tender_specification_rev_A.pdf');
+
+        // Verify missing drawings generate RFI warning labels in the readiness summary
+        await expect(registerSection).toContainText('Architectural Drawings Missing');
+
+        // Click Generate Professional Quote
+        const generateBtn = page.locator('#generate-quote-btn');
+        await generateBtn.click();
+
+        // Wait for generation to run
+        await page.waitForTimeout(6000);
+
+        // Verify that drawing-interpreter and quantity-surveyor were SKIPPED
+        const interpreterStage = page.locator('#stage-drawing-interpreter');
+        await expect(interpreterStage).toContainText('SKIPPED');
+
+        const qsStage = page.locator('#stage-quantity-surveyor');
+        await expect(qsStage).toContainText('SKIPPED');
+
+        // Click on skipped stage to view detail explanation
+        await interpreterStage.click();
+        const outputWrapper = page.locator('#output-content-wrapper');
+        await expect(outputWrapper).toContainText('No architectural drawings supplied.');
+    });
+
 });

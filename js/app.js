@@ -108,6 +108,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Drag and Drop listeners for upload zone
+    const uploadZone = document.getElementById('workspace-upload-zone');
+    if (uploadZone) {
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('border-brand-gold', 'bg-brand-gold-muted/10');
+        });
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('border-brand-gold', 'bg-brand-gold-muted/10');
+        });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('border-brand-gold', 'bg-brand-gold-muted/10');
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                ingestFilesWithProgress(files);
+            }
+        });
+    }
+
 });
 
 /* Initialize Lucide icons helper */
@@ -427,6 +447,7 @@ function initWorkspaceData() {
             if (data.uploadedFiles) {
                 uploadedFiles = data.uploadedFiles;
                 renderUploadedFilesList();
+                renderDocumentRegisterAndReadiness();
             }
 
         } catch (e) {
@@ -1030,30 +1051,163 @@ function simulateFileUpload() {
 function handleWorkspaceFiles(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
+    ingestFilesWithProgress(files);
+}
 
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        // Skip duplicate files by name
-        if (uploadedFiles.some(f => f.name === file.name)) continue;
+// Classify a tender file based on name patterns
+function classifyTenderFile(file) {
+    const name = file.name.toLowerCase();
 
-        const pages = Math.floor(Math.random() * 12) + 2; // Random pages 2-13
-        const confidenceScore = Math.floor(Math.random() * 14) + 85; // Random confidence 85-98%
+    let classification = "Other";
+    let type = "document";
+    let drawingNumber = "";
+    let revision = "Rev A";
+    let pages = Math.floor(Math.random() * 10) + 3; // Default pages 3-12
+    let confidence = Math.floor(Math.random() * 10) + 88; // Default 88-97%
 
-        uploadedFiles.push({
-            id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-            name: file.name,
-            size: file.size,
-            formattedSize: formatBytes(file.size),
-            type: file.type || 'Document',
-            pages: pages,
-            processingStatus: 'Analysis Complete',
-            confidenceScore: confidenceScore
-        });
+    // Categorization rules
+    if (name.includes('drawing') || name.includes('blueprint') || name.includes('plan') || name.includes('elevation') || name.includes('section') || name.includes('.dwg')) {
+        if (name.includes('structural') || name.includes('steel') || name.includes('beam') || name.includes('column') || name.includes('foundation') || name.includes('retaining')) {
+            classification = "Structural Drawings";
+        } else {
+            classification = "Architectural Drawings";
+        }
+        type = "drawing";
+        pages = 1; // drawings typically individual sheets
+    } else if (name.includes('specification') || name.includes('spec') || name.includes('requirements')) {
+        classification = "Specifications";
+        type = "spec";
+    } else if (name.includes('schedule') || name.includes('door') || name.includes('window') || name.includes('finishes')) {
+        classification = "Schedules";
+        type = "schedule";
+    } else if (name.includes('planning') || name.includes('permission') || name.includes('decision')) {
+        classification = "Planning Documents";
+        type = "planning";
+    } else if (name.includes('report') || name.includes('ground') || name.includes('soil') || name.includes('investigation') || name.includes('survey') || name.includes('site') || name.includes('fire')) {
+        classification = "Reports";
+        type = "report";
     }
 
-    showToast('Files Processed', `Loaded ${files.length} project document(s). Pre-parsing structures...`);
-    renderUploadedFilesList();
-    saveWorkspaceToLocalStorage();
+    // Try to extract drawing number e.g. A-101, S102, W01, D01, etc.
+    const dwgPattern = /(a|s|m|e|t|w|d|p)[-_\s]*[0-9]{3}/i;
+    const matchDwg = name.match(dwgPattern);
+    if (matchDwg) {
+        drawingNumber = matchDwg[0].toUpperCase();
+    } else if (name.includes('door')) {
+        drawingNumber = "D01";
+    } else if (name.includes('window')) {
+        drawingNumber = "W01";
+    } else if (classification === "Architectural Drawings") {
+        drawingNumber = "A101";
+    } else if (classification === "Structural Drawings") {
+        drawingNumber = "S101";
+    }
+
+    // Try to extract revision e.g. rev_B, revB, rev.b, v2, etc.
+    const revPattern = /rev[_\s.-]*([a-z0-9])/i;
+    const matchRev = name.match(revPattern);
+    if (matchRev && matchRev[1]) {
+        revision = "Rev " + matchRev[1].toUpperCase();
+    } else {
+        const vPattern = /v([0-9]+)/i;
+        const matchV = name.match(vPattern);
+        if (matchV && matchV[1]) {
+            revision = "Rev " + matchV[1];
+        }
+    }
+
+    return {
+        classification,
+        type,
+        drawingNumber,
+        revision,
+        pages,
+        confidence
+    };
+}
+
+// Ingest files with interactive step-by-step progress loaders
+function ingestFilesWithProgress(files) {
+    const uploadZone = document.getElementById('workspace-upload-zone');
+    if (!uploadZone) return;
+
+    // Preserve original innerHTML to restore later
+    const originalHTML = uploadZone.innerHTML;
+
+    // Disabling pointer events so user cannot double click during upload
+    uploadZone.style.pointerEvents = 'none';
+
+    const steps = [
+        "Uploading...",
+        "Reading Documents...",
+        "Classifying Documents...",
+        "Extracting Metadata...",
+        "Building Document Register...",
+        "Preparing AI Pipeline..."
+    ];
+
+    let currentStepIdx = 0;
+
+    function renderProgressStep() {
+        if (currentStepIdx >= steps.length) {
+            // Restore upload zone
+            uploadZone.innerHTML = originalHTML;
+            uploadZone.style.pointerEvents = 'auto';
+
+            // Add files to state
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (uploadedFiles.some(f => f.name === file.name)) continue;
+
+                const docDetails = classifyTenderFile(file);
+
+                uploadedFiles.push({
+                    id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+                    name: file.name,
+                    size: file.size,
+                    formattedSize: formatBytes(file.size),
+                    type: docDetails.type,
+                    pages: docDetails.pages,
+                    processingStatus: 'Analysis Complete',
+                    confidenceScore: docDetails.confidence,
+                    classification: docDetails.classification,
+                    revision: docDetails.revision,
+                    drawingNumber: docDetails.drawingNumber
+                });
+            }
+
+            showToast('Files Processed', `Loaded ${files.length} project document(s). Pre-parsing structures...`);
+            renderUploadedFilesList();
+            if (typeof renderDocumentRegisterAndReadiness === 'function') {
+                renderDocumentRegisterAndReadiness();
+            }
+            updateProjectReviewPanelStats();
+            saveWorkspaceToLocalStorage();
+            return;
+        }
+
+        const percentage = Math.round(((currentStepIdx + 1) / steps.length) * 100);
+        uploadZone.innerHTML = `
+            <div class="space-y-3 py-4 flex flex-col items-center justify-center">
+                <div class="w-8 h-8 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold animate-spin">
+                    <i data-lucide="loader-2" class="w-4 h-4"></i>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs font-bold text-brand-gold uppercase tracking-wider">${steps[currentStepIdx]}</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Please wait, compiling construction package... ${percentage}%</p>
+                </div>
+                <div class="w-48 h-1.5 bg-brand-graphite rounded-full overflow-hidden border border-brand-glass-border">
+                    <div class="h-full bg-brand-gold transition-all duration-300" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+        initLucide();
+
+        currentStepIdx++;
+        setTimeout(renderProgressStep, 300);
+    }
+
+    renderProgressStep();
 }
 
 // Render the list of uploaded files
@@ -1111,10 +1265,187 @@ function renderUploadedFilesList() {
     initLucide();
 }
 
+// Render permanent Document Register, Project Readiness Summary, and Relationships Graph
+function renderDocumentRegisterAndReadiness() {
+    const section = document.getElementById('document-register-section');
+    if (!section) return;
+
+    if (uploadedFiles.length === 0) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    // 1. Identify categories present
+    const categoriesFound = {
+        "Architectural Drawings": false,
+        "Structural Drawings": false,
+        "Specifications": false,
+        "Schedules": false,
+        "Reports": false,
+        "Planning Documents": false
+    };
+
+    uploadedFiles.forEach(f => {
+        if (categoriesFound.hasOwnProperty(f.classification)) {
+            categoriesFound[f.classification] = true;
+        }
+    });
+
+    // Determine readiness
+    const foundCount = Object.values(categoriesFound).filter(Boolean).length;
+    const totalCount = Object.keys(categoriesFound).length;
+
+    let readinessStatus = "PROJECT READY";
+    let readinessClass = "bg-green-500/10 border border-green-500/30 text-green-400 font-mono";
+    let confidenceScore = Math.round(75 + (foundCount / totalCount) * 23); // up to 98%
+
+    if (foundCount === 0) {
+        readinessStatus = "NOT READY";
+        readinessClass = "bg-red-500/10 border border-red-500/30 text-red-400 font-mono";
+        confidenceScore = 0;
+    } else if (foundCount < 3) {
+        readinessStatus = "ACTION REQUIRED";
+        readinessClass = "bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-mono";
+    } else if (foundCount < totalCount) {
+        readinessStatus = "PARTIALLY READY";
+        readinessClass = "bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-mono";
+    }
+
+    // Set badge & score
+    const statusBadge = document.getElementById('readiness-status-badge');
+    if (statusBadge) {
+        statusBadge.textContent = readinessStatus;
+        statusBadge.className = `px-2.5 py-1 text-[10px] font-bold rounded-lg ${readinessClass}`;
+    }
+
+    const confScoreSpan = document.getElementById('readiness-confidence-score');
+    if (confScoreSpan) {
+        confScoreSpan.textContent = `${confidenceScore}%`;
+    }
+
+    // Render Readiness Found Checklist
+    const foundChecklist = document.getElementById('readiness-found-checklist');
+    if (foundChecklist) {
+        foundChecklist.innerHTML = Object.entries(categoriesFound).map(([cat, found]) => `
+            <div class="flex items-center gap-1.5 ${found ? 'text-green-400' : 'text-gray-500'}">
+                <i data-lucide="${found ? 'check-square-2' : 'square'}" class="w-4 h-4 shrink-0"></i>
+                <span class="truncate">${cat}</span>
+            </div>
+        `).join('');
+    }
+
+    // Render Missing Items / RFIs
+    const missingBox = document.getElementById('readiness-missing-box');
+    const missingList = document.getElementById('readiness-missing-list');
+    if (missingBox && missingList) {
+        const missingCategories = Object.entries(categoriesFound)
+            .filter(([_, found]) => !found)
+            .map(([cat]) => cat);
+
+        if (missingCategories.length === 0) {
+            missingBox.classList.add('hidden');
+        } else {
+            missingBox.classList.remove('hidden');
+            missingList.innerHTML = missingCategories.map(cat => {
+                let rfiDesc = "";
+                if (cat === "Architectural Drawings") rfiDesc = "Cannot measure spatial dimensions or walls.";
+                else if (cat === "Structural Drawings") rfiDesc = "Steel universal columns / foundation specifics missing.";
+                else if (cat === "Specifications") rfiDesc = "Scope standard & quality descriptions unspecified.";
+                else if (cat === "Schedules") rfiDesc = "Door and window counts unavailable for physical schedules.";
+                else if (cat === "Reports") rfiDesc = "Ground load bearing/stability indices missing.";
+                else if (cat === "Planning Documents") rfiDesc = "No municipal boundary permission on record.";
+                return `
+                    <li class="flex flex-col gap-0.5 border-l-2 border-yellow-500/40 pl-2 py-0.5">
+                        <span class="text-white font-semibold">✗ ${cat} Missing</span>
+                        <span class="text-[10px] text-yellow-500/70 font-mono italic">RFI Generated: ${rfiDesc}</span>
+                    </li>
+                `;
+            }).join('');
+        }
+    }
+
+    // Render Document Register Table Rows
+    const tbody = document.getElementById('document-register-tbody');
+    if (tbody) {
+        tbody.innerHTML = uploadedFiles.map(f => {
+            const dwgNo = f.drawingNumber || '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+            const rev = f.revision || '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+            return `
+                <tr class="hover:bg-brand-glass-hover border-b border-brand-glass-border/30 text-gray-300">
+                    <td class="p-3 font-semibold text-brand-gold">${f.classification || 'Other'}</td>
+                    <td class="p-3 text-white truncate max-w-[200px]" title="${f.name}">${f.name}</td>
+                    <td class="p-3 font-mono text-center">${dwgNo}</td>
+                    <td class="p-3 text-center font-mono">${f.pages || 1}</td>
+                    <td class="p-3 text-center font-mono text-white font-bold">${rev}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-0.5 rounded-full font-bold text-[9px] bg-green-500/10 border border-green-500/30 text-green-400">
+                            Processed
+                        </span>
+                    </td>
+                    <td class="p-3 text-right font-mono text-brand-gold font-bold">${f.confidenceScore}%</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Render Document Relationships Node Graph
+    const graphContainer = document.getElementById('relationships-graph-container');
+    if (graphContainer) {
+        const archFile = uploadedFiles.find(f => f.classification === "Architectural Drawings");
+        const dwgLabel = archFile ? archFile.drawingNumber || "A101" : "A101";
+
+        const hasSchedules = categoriesFound["Schedules"];
+        const hasSpecs = categoriesFound["Specifications"];
+
+        graphContainer.innerHTML = `
+            <!-- Node 1: Drawing -->
+            <div class="flex flex-col items-center">
+                <div class="px-3 py-2 bg-brand-matte border ${archFile ? 'border-brand-gold shadow-gold-glow-sm text-brand-gold' : 'border-gray-700 text-gray-500'} rounded-xl text-xs font-bold font-mono">
+                    Drawing ${dwgLabel}
+                </div>
+                <span class="text-[9px] text-gray-500 mt-1 uppercase">Drawing Base</span>
+            </div>
+
+            <!-- Connection ➔ -->
+            <div class="flex flex-col items-center justify-center text-brand-gold">
+                <i data-lucide="arrow-right-left" class="w-4 h-4 ${archFile && hasSchedules ? 'text-brand-gold' : 'text-gray-700'}"></i>
+                <span class="text-[8px] text-gray-500 font-mono mt-0.5">X-Ref</span>
+            </div>
+
+            <!-- Node 2: Schedules -->
+            <div class="flex flex-col items-center">
+                <div class="px-3 py-2 bg-brand-matte border ${hasSchedules ? 'border-brand-gold shadow-gold-glow-sm text-brand-gold' : 'border-gray-700 text-gray-500'} rounded-xl text-xs font-bold font-mono">
+                    Door/Window D01/W01
+                </div>
+                <span class="text-[9px] text-gray-500 mt-1 uppercase">Schedules Mapping</span>
+            </div>
+
+            <!-- Connection ➔ -->
+            <div class="flex flex-col items-center justify-center text-brand-gold">
+                <i data-lucide="arrow-right-left" class="w-4 h-4 ${hasSchedules && hasSpecs ? 'text-brand-gold' : 'text-gray-700'}"></i>
+                <span class="text-[8px] text-gray-500 font-mono mt-0.5">Verify</span>
+            </div>
+
+            <!-- Node 3: Specification -->
+            <div class="flex flex-col items-center">
+                <div class="px-3 py-2 bg-brand-matte border ${hasSpecs ? 'border-brand-gold shadow-gold-glow-sm text-brand-gold' : 'border-gray-700 text-gray-500'} rounded-xl text-xs font-bold font-mono">
+                    Specification Sec 08
+                </div>
+                <span class="text-[9px] text-gray-500 mt-1 uppercase">Standard Clauses</span>
+            </div>
+        `;
+    }
+
+    initLucide();
+}
+
 // Remove an uploaded file
 function removeUploadedFile(id) {
     uploadedFiles = uploadedFiles.filter(f => f.id !== id);
     renderUploadedFilesList();
+    renderDocumentRegisterAndReadiness();
     showToast('File Removed', 'Document unlinked.');
     saveWorkspaceToLocalStorage();
 }
@@ -1132,15 +1463,23 @@ function replaceUploadedFile(id) {
 
         const index = uploadedFiles.findIndex(f => f.id === fileToReplaceId);
         if (index !== -1) {
+            const docDetails = classifyTenderFile(file);
             uploadedFiles[index] = {
                 id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
                 name: file.name,
                 size: file.size,
                 formattedSize: formatBytes(file.size),
-                type: file.type
+                type: docDetails.type,
+                pages: docDetails.pages,
+                processingStatus: 'Analysis Complete',
+                confidenceScore: docDetails.confidence,
+                classification: docDetails.classification,
+                revision: docDetails.revision,
+                drawingNumber: docDetails.drawingNumber
             };
             showToast('File Replaced', `Successfully replaced with ${file.name}`);
             renderUploadedFilesList();
+            renderDocumentRegisterAndReadiness();
             saveWorkspaceToLocalStorage();
         }
         fileToReplaceId = null;
@@ -1155,11 +1494,14 @@ function loadSampleProjectDescription() {
         desc.value = `Tender specifications for Mayfair duplex residential refurb:\n- Ground Floor: Demolition of internal structural masonry partitions, supply and installation of steel universal columns (203x203x46 UC).\n- First Floor: Install structural stud partition walls, skim coat plaster, double insulated plasterboards.\n- Electrical sub-circuits: 12 LED downlights, 6 double sockets, regional utility certificate audit.\n- Flooring: Underfloor insulation, dry screed flooring base, engineered premium Oak timber floorboards throughout.`;
 
         uploadedFiles = [
-            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'application/pdf', pages: 8, processingStatus: 'Analysis Complete', confidenceScore: 98 },
-            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'application/pdf', pages: 4, processingStatus: 'Analysis Complete', confidenceScore: 95 },
-            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'image/jpeg', pages: 1, processingStatus: 'Analysis Complete', confidenceScore: 92 }
+            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'drawing', pages: 8, processingStatus: 'Analysis Complete', confidenceScore: 98, classification: "Architectural Drawings", revision: "Rev B", drawingNumber: "A101" },
+            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'spec', pages: 4, processingStatus: 'Analysis Complete', confidenceScore: 95, classification: "Specifications", revision: "Rev A", drawingNumber: "" },
+            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'report', pages: 1, processingStatus: 'Analysis Complete', confidenceScore: 92, classification: "Reports", revision: "Rev A", drawingNumber: "" }
         ];
         renderUploadedFilesList();
+        if (typeof renderDocumentRegisterAndReadiness === 'function') {
+            renderDocumentRegisterAndReadiness();
+        }
 
         saveWorkspaceToLocalStorage();
         showToast('Sample Loaded', 'Architectural tender spec and sample project drawings loaded.');
@@ -2543,6 +2885,67 @@ function syncPipelineMonitorUI(stageId, state, data = null) {
             }
         };
 
+    } else if (state === "Skipped") {
+        item.className = "flex items-center justify-between p-1 rounded bg-yellow-500/5 hover:bg-brand-glass-hover text-yellow-500 cursor-pointer transition-colors";
+        if (badge) {
+            badge.textContent = "⚠ SKIPPED";
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-yellow-500";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "alert-triangle");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-yellow-500 status-icon";
+        }
+        item.onclick = () => {
+            const viewport = document.getElementById('output-content-wrapper');
+            if (viewport && data) {
+                viewport.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="border-b border-brand-glass-border pb-3 flex justify-between items-center">
+                            <div>
+                                <h4 class="text-yellow-500 font-bold text-base uppercase">Stage Skipped: ${stageId.replace('-', ' ')}</h4>
+                                <p class="text-[11px] text-gray-400">Prerequisites for this stage were not satisfied.</p>
+                            </div>
+                        </div>
+                        <div class="p-5 bg-yellow-500/10 border border-yellow-500/20 rounded-xl space-y-3 text-xs leading-relaxed text-yellow-500">
+                            <p class="font-bold flex items-center gap-1.5 text-white">
+                                <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span>
+                                Required Information Missing
+                            </p>
+                            <p><strong>Reason:</strong> ${data.reason}</p>
+                            <p><strong>Required:</strong> ${data.required}</p>
+                        </div>
+                    </div>
+                `;
+                initLucide();
+            }
+        };
+    } else if (state === "Blocked") {
+        item.className = "flex items-center justify-between p-1 rounded bg-red-500/5 text-red-500 cursor-pointer transition-colors";
+        if (badge) {
+            badge.textContent = "🛑 BLOCKED";
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-red-500";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "slash");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-red-500 status-icon";
+        }
+        item.onclick = () => {
+            const viewport = document.getElementById('output-content-wrapper');
+            if (viewport && data) {
+                viewport.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="border-b border-brand-glass-border pb-3">
+                            <h4 class="text-red-500 font-bold text-base uppercase">Stage Blocked: ${stageId.replace('-', ' ')}</h4>
+                            <p class="text-[11px] text-gray-400">Execution is blocked by upstream dependencies.</p>
+                        </div>
+                        <div class="p-5 bg-red-500/10 border border-red-500/20 rounded-xl space-y-3 text-xs leading-relaxed text-red-400">
+                            <p><strong>Reason:</strong> Upstream prerequisites failed or were skipped.</p>
+                        </div>
+                    </div>
+                `;
+                initLucide();
+            }
+        };
     } else if (state === "Failed") {
         item.className = "flex items-center justify-between p-1 rounded bg-red-500/10 text-red-400";
         if (badge) {

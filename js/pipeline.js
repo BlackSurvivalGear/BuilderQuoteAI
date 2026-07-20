@@ -4,6 +4,67 @@
  * JSON validation layer, state persistence, step reruns, and developer logging.
  */
 
+function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
+    const hasCategory = (cat) => uploadedFiles.some(f => f.classification === cat);
+    const stageCompleted = (id) => completedStages[id] && completedStages[id].status !== "skipped";
+
+    switch (stageId) {
+        case "drawing-interpreter":
+            if (!hasCategory("Architectural Drawings")) {
+                return {
+                    applicable: false,
+                    reason: "No architectural drawings supplied.",
+                    required: "Architectural floor plans or sections."
+                };
+            }
+            break;
+
+        case "quantity-surveyor":
+            if (!hasCategory("Architectural Drawings") && !hasCategory("Structural Drawings")) {
+                return {
+                    applicable: false,
+                    reason: "No measurable drawings supplied.",
+                    required: "Architectural or structural drawings."
+                };
+            }
+            break;
+
+        case "boq-generator":
+            if (!stageCompleted("quantity-surveyor")) {
+                return {
+                    applicable: false,
+                    reason: "No measured takeoff quantities available.",
+                    required: "Successful Quantity Surveyor takeoff analysis."
+                };
+            }
+            break;
+
+        case "cost-estimator":
+            const hasQuantities = stageCompleted("quantity-surveyor");
+            const hasSpecs = hasCategory("Specifications");
+            if (!hasQuantities && !hasSpecs) {
+                return {
+                    applicable: false,
+                    reason: "No quantity takeoff or project specifications available.",
+                    required: "Tender specifications or measurable floor plans."
+                };
+            }
+            break;
+
+        case "quotation-generator":
+            if (!stageCompleted("cost-estimator")) {
+                return {
+                    applicable: false,
+                    reason: "No cost estimation available to calculate the bid summary.",
+                    required: "Successful cost estimator stage results."
+                };
+            }
+            break;
+    }
+
+    return { applicable: true };
+}
+
 // Global State / Namespace for Pipeline
 window.BQAIPipeline = {
     // 12 official stages in correct sequence
@@ -161,6 +222,10 @@ window.BQAIPipeline = {
         },
 
         validate(stageId, data) {
+            if (data && data.status === "skipped") {
+                return { valid: true, error: null };
+            }
+
             const schema = this.schemas[stageId];
             if (!schema) {
                 return { valid: true, error: null };
@@ -459,14 +524,31 @@ window.BQAIPipeline = {
                         ]
                     };
 
-                case "clarification-generator":
+                case "clarification-generator": {
+                    const hasCategory = (cat) => (inputData.uploadedFiles || []).some(f => f.classification === cat);
+                    const clarifications = [
+                        { id: "CL-01", item: "First floor partition studs spacing", query: "Please confirm if studs require 400mm or 600mm centers." }
+                    ];
+
+                    if (!hasCategory("Architectural Drawings")) {
+                        clarifications.push({ id: "RFI-01", item: "Architectural floor plans", query: "Window, door, and partition layouts are completely missing. Please supply floor plans." });
+                    }
+                    if (!hasCategory("Structural Drawings")) {
+                        clarifications.push({ id: "RFI-02", item: "Structural steel specifications & footings depth", query: "Foundation depth and steel universal column reinforcement spacing unspecified." });
+                    }
+                    if (!hasCategory("Specifications")) {
+                        clarifications.push({ id: "RFI-03", item: "Materials / finishes specifications", query: "Roof build-up, timber grades, and insulation U-values unspecified." });
+                    }
+                    if (!hasCategory("Schedules")) {
+                        clarifications.push({ id: "RFI-04", item: "Door & window schedules", query: "Schedules missing; default timber frames and standards assumed." });
+                    }
+
                     return {
                         stage: "clarification-generator",
                         status: "success",
-                        clarifications: [
-                            { id: "CL-01", item: "First floor partition studs spacing", query: "Please confirm if studs require 400mm or 600mm centers." }
-                        ]
+                        clarifications: clarifications
                     };
+                }
 
                 case "quotation-generator": {
                     const quoteNo = inputData.quoteNumber || "BQ-2024-991";
@@ -571,6 +653,38 @@ window.BQAIPipeline = {
                 const stage = stages[i];
                 BQAIPipeline.state.activeStageIdx = i;
 
+                const currentFiles = window.uploadedFiles || [];
+
+                // Check prerequisites
+                const prereq = getPrerequisiteStatus(stage.id, currentFiles, currentOutputs);
+                if (!prereq.applicable) {
+                    // Mark as Skipped
+                    currentOutputs[stage.id] = {
+                        stage: stage.id,
+                        status: "skipped",
+                        reason: prereq.reason,
+                        required: prereq.required
+                    };
+                    BQAIPipeline.Persistence.saveStages(currentOutputs);
+
+                    // Add Developer Log for Skipped stage
+                    BQAIPipeline.Manager.addLog(
+                        stage.id,
+                        Date.now(),
+                        Date.now(),
+                        activeProv,
+                        true,
+                        `⚠ Skipped: ${prereq.reason}`,
+                        0,
+                        0,
+                        activeProv ? activeProv.defaultModel : "Sovereign-Llama3-8B"
+                    );
+
+                    if (onStatusChange) onStatusChange(stage.id, "Skipped", currentOutputs[stage.id]);
+                    await new Promise(r => setTimeout(r, 400));
+                    continue;
+                }
+
                 // Update UI status to Running
                 if (onStatusChange) onStatusChange(stage.id, "Running");
                 if (onProgressChange) onProgressChange(stage.msg || `Executing ${stage.name}...`);
@@ -579,7 +693,7 @@ window.BQAIPipeline = {
                 const inputPayload = {
                     projectName: document.getElementById('project-name')?.value || "Mayfair Duplex Refurb",
                     region: document.getElementById('project-region')?.value || "London",
-                    uploadedFiles: window.uploadedFiles || [],
+                    uploadedFiles: currentFiles,
                     projectDescription: document.getElementById('workspace-project-description')?.value || "",
                     ...currentOutputs // Merges all previous stage structured JSON payloads
                 };
