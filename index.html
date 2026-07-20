@@ -156,6 +156,10 @@
                             <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
                             AI Settings
                         </button>
+                        <button onclick="switchWorkspaceTab('dev-logs')" id="tab-btn-dev-logs" class="px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
+                            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                            Dev Logs
+                        </button>
                     </div>
                 </div>
             </div>
@@ -460,60 +464,98 @@
                                 AI Takeoff & Progress Panel
                             </h3>
 
-                            <!-- Animated Checklist -->
-                            <div id="ai-progress-checklist" class="space-y-2 text-xs">
-                                <div id="step-0" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Uploading Documents...</span>
+                            <!-- Animated Checklist (12-stage official pipeline monitor) -->
+                            <div id="ai-progress-checklist" class="space-y-1.5 text-xs max-h-[300px] overflow-y-auto pr-1">
+                                <!-- Replaced dynamically, but structured base container here -->
+                                <div id="stage-upload-documents" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">1. Upload Documents <span id="step-0" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-1" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Reading Drawings...</span>
+                                <div id="stage-document-intelligence" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">2. Document Intelligence</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-2" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>OCR Processing...</span>
+                                <div id="stage-drawing-interpreter" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">3. Drawing Interpreter</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-3" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Analysing Specifications...</span>
+                                <div id="stage-quantity-surveyor" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">4. Quantity Surveyor</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-4" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Detecting Trade Packages...</span>
+                                <div id="stage-boq-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">5. BOQ Generator</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-5" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Measuring Quantities...</span>
+                                <div id="stage-regional-pricing" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">6. Regional Pricing</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-6" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Generating BOQ...</span>
+                                <div id="stage-cost-estimator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">7. Cost Estimator</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-7" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Pricing Materials...</span>
+                                <div id="stage-risk-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">8. Risk Analysis</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-8" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Pricing Labour...</span>
+                                <div id="stage-clarification-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">9. Clarification Gen</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-9" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Applying Regional Rates...</span>
+                                <div id="stage-quotation-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">10. Quotation Generator</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-10" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Calculating Overheads...</span>
+                                <div id="stage-client-summary" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">11. Client Summary</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-11" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Generating Professional Quote...</span>
+                                <div id="stage-export-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">12. Export Generator</span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="step-12" class="flex items-center gap-2.5 text-gray-400">
-                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                                    <span>Complete</span>
-                                </div>
+                            </div>
+                            <!-- Real-time Progress message box -->
+                            <div class="bg-brand-matte/50 p-2.5 rounded-lg border border-brand-glass-border/30 text-[11px] text-gray-400 flex items-center gap-2" id="pipeline-progress-msg-box">
+                                <i data-lucide="info" class="w-4 h-4 text-brand-gold shrink-0"></i>
+                                <span id="pipeline-progress-msg" class="italic">Pipeline idle. Upload a project and trigger professional quotation.</span>
                             </div>
                         </div>
 
@@ -674,6 +716,46 @@
                     <!-- Provider List Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="ai-providers-grid">
                         <!-- Dynamic JS will inject the 8 providers: OpenAI, Claude, Gemini, Grok, OpenRouter, Mistral, DeepSeek, Ollama -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DEVELOPER LOGS PAGE -->
+            <div id="workspace-tab-dev-logs" class="hidden space-y-6">
+                <div class="bg-brand-graphite border border-brand-glass-border rounded-xl p-6 space-y-4">
+                    <div class="flex items-center justify-between border-b border-brand-glass-border pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold">
+                                <i data-lucide="terminal" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-white">Enterprise AI Developer Mode</h2>
+                                <p class="text-xs text-gray-400">Detailed transaction trace logs for all 12 specialisation modules.</p>
+                            </div>
+                        </div>
+                        <button onclick="clearPipelineLogs()" class="px-3.5 py-1.5 rounded-lg border border-brand-glass-border text-xs text-gray-400 hover:text-white hover:bg-brand-glass-hover transition-all">Clear Traces</button>
+                    </div>
+
+                    <!-- Log Table -->
+                    <div class="overflow-x-auto border border-brand-glass-border/30 rounded-xl">
+                        <table class="w-full text-left text-xs border-collapse font-mono">
+                            <thead>
+                                <tr class="bg-brand-matte border-b border-brand-glass-border text-[10px] text-gray-400 font-bold uppercase">
+                                    <th class="p-3">Stage</th>
+                                    <th class="p-3">Start/End</th>
+                                    <th class="p-3">Duration</th>
+                                    <th class="p-3">Provider / Model</th>
+                                    <th class="p-3 text-right">Tokens</th>
+                                    <th class="p-3 text-center">Status</th>
+                                    <th class="p-3">Validation Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pipeline-logs-tbody" class="divide-y divide-brand-glass-border/20 text-gray-300">
+                                <tr>
+                                    <td colspan="7" class="p-8 text-center text-gray-500 italic">No transactions executed yet. Run the Quotation pipeline to see detailed logs.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1488,6 +1570,7 @@
     </footer>
 
     <!-- Custom App JavaScript -->
+    <script src="js/pipeline.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

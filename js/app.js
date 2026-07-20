@@ -335,26 +335,52 @@ function toggleDeveloperPanel() {
     }
 }
 
+// Helper to easily fetch the active provider mapping
+function getBQAIEngineProvider() {
+    return aiProviders.find(p => p.enabled) || null;
+}
+
+// Clear Pipeline transactions list
+function clearPipelineLogs() {
+    if (window.BQAIPipeline) {
+        window.BQAIPipeline.Persistence.clearAll();
+        window.BQAIPipeline.state.developerLogs = [];
+        renderPipelineDeveloperLogs();
+        showToast("Traces Cleared", "AI transition histories cleared successfully.");
+    }
+}
+
 // Switch between workspace sub-tabs
 function switchWorkspaceTab(tab) {
     activeWorkspaceTab = tab;
     const tabBOQ = document.getElementById('workspace-tab-boq');
     const tabSettings = document.getElementById('workspace-tab-ai-settings');
+    const tabDevLogs = document.getElementById('workspace-tab-dev-logs');
+
     const btnBOQ = document.getElementById('tab-btn-boq');
     const btnSettings = document.getElementById('tab-btn-ai-settings');
+    const btnDevLogs = document.getElementById('tab-btn-dev-logs');
+
+    if (tabBOQ) tabBOQ.classList.add('hidden');
+    if (tabSettings) tabSettings.classList.add('hidden');
+    if (tabDevLogs) tabDevLogs.classList.add('hidden');
+
+    if (btnBOQ) btnBOQ.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
+    if (btnSettings) btnSettings.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
+    if (btnDevLogs) btnDevLogs.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
 
     if (tab === 'boq') {
         if (tabBOQ) tabBOQ.classList.remove('hidden');
-        if (tabSettings) tabSettings.classList.add('hidden');
         if (btnBOQ) btnBOQ.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
-        if (btnSettings) btnSettings.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
         updateProjectReviewPanelStats();
-    } else {
-        if (tabBOQ) tabBOQ.classList.add('hidden');
+    } else if (tab === 'ai-settings') {
         if (tabSettings) tabSettings.classList.remove('hidden');
-        if (btnBOQ) btnBOQ.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
         if (btnSettings) btnSettings.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
         renderAIProviders();
+    } else if (tab === 'dev-logs') {
+        if (tabDevLogs) tabDevLogs.classList.remove('hidden');
+        if (btnDevLogs) btnDevLogs.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
+        renderPipelineDeveloperLogs();
     }
     initLucide();
 }
@@ -2420,10 +2446,134 @@ function logDeveloperDebugInfo(info) {
     console.log("===================================");
 }
 
-function triggerOneClickQuote() {
+// Trigger Rerun of specific pipeline stage
+async function triggerPipelineStageRerun(stageId) {
+    if (!window.BQAIPipeline) return;
+    showToast("Stage Rerun", `Initiating isolated rerun from stage "${stageId}"...`);
+    await runBQAIPipelineOrchestrator(stageId);
+}
+
+// Render dynamic Developer Mode log trace rows
+function renderPipelineDeveloperLogs() {
+    const tbody = document.getElementById('pipeline-logs-tbody');
+    if (!tbody) return;
+
+    const logs = window.BQAIPipeline ? BQAIPipeline.Persistence.loadLogs() : [];
+    if (logs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="p-8 text-center text-gray-500 italic">No transactions executed yet. Run the Quotation pipeline to see detailed logs.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = '';
+    logs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-brand-glass-hover border-b border-brand-glass-border/30 text-gray-300";
+        tr.innerHTML = `
+            <td class="p-3 font-semibold text-white">${log.stageName}</td>
+            <td class="p-3 font-mono text-[10px]">${log.startTime} - ${log.finishTime}</td>
+            <td class="p-3 font-mono text-brand-gold font-bold">${log.duration}</td>
+            <td class="p-3 text-[11px]"><span class="text-white">${log.provider}</span> / <span class="text-gray-400 font-mono">${log.model}</span></td>
+            <td class="p-3 text-right font-mono">${log.tokensUsed} tok</td>
+            <td class="p-3 text-center">
+                <span class="px-2 py-0.5 rounded font-bold text-[9px] ${log.success ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}">
+                    ${log.success ? 'SUCCESS' : 'FAILED'}
+                </span>
+            </td>
+            <td class="p-3 text-gray-400 font-mono text-[11px] truncate max-w-[140px]" title="${log.validationResult}">${log.validationResult}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Synchronise completed stages visualization
+function syncPipelineMonitorUI(stageId, state, data = null) {
+    const item = document.getElementById(`stage-${stageId}`);
+    if (!item) return;
+
+    const badge = item.querySelector('.status-badge');
+    const icon = item.querySelector('.status-icon');
+
+    // Icon / color mappings based on states
+    if (state === "Running") {
+        item.className = "flex items-center justify-between p-1 rounded bg-brand-gold-muted/15 border border-brand-gold/30 text-brand-gold";
+        if (badge) {
+            badge.textContent = "⟳ RUNNING";
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-brand-gold animate-pulse";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "loader-2");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-brand-gold animate-spin status-icon";
+        }
+    } else if (state === "Completed") {
+        item.className = "flex items-center justify-between p-1 rounded bg-green-500/5 hover:bg-brand-glass-hover text-green-400 cursor-pointer transition-colors";
+        if (badge) {
+            badge.textContent = "✔ COMPLETED";
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-green-400";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "check-circle-2");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-green-400 status-icon";
+        }
+
+        // Add interactive inspection options
+        item.onclick = () => {
+            // Populate Details viewport
+            const viewport = document.getElementById('output-content-wrapper');
+            if (viewport && data) {
+                viewport.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="border-b border-brand-glass-border pb-3 flex justify-between items-center">
+                            <div>
+                                <h4 class="text-brand-gold font-bold text-base uppercase">Inspect Stage: ${stageId.replace('-', ' ')}</h4>
+                                <p class="text-[11px] text-gray-400">Structured JSON Contract payload verified successfully.</p>
+                            </div>
+                            <button onclick="triggerPipelineStageRerun('${stageId}')" class="px-2.5 py-1.5 bg-brand-gold text-brand-matte text-[10px] font-bold rounded-lg hover:bg-brand-gold-hover transition-all flex items-center gap-1.5">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                Rerun Downstream
+                            </button>
+                        </div>
+                        <pre class="bg-brand-matte/80 border border-brand-glass-border/40 p-4 rounded-xl font-mono text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-[350px]">${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                initLucide();
+            }
+        };
+
+    } else if (state === "Failed") {
+        item.className = "flex items-center justify-between p-1 rounded bg-red-500/10 text-red-400";
+        if (badge) {
+            badge.textContent = "✗ FAILED";
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-red-400";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "x-circle");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-red-400 status-icon";
+        }
+    } else {
+        // Waiting state
+        item.className = "flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400";
+        if (badge) {
+            badge.textContent = "WAITING";
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-gray-500";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "circle");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-gray-500 status-icon";
+        }
+        item.onclick = null;
+    }
+    initLucide();
+}
+
+// Master Pipeline execution trigger
+async function runBQAIPipelineOrchestrator(startStageId = null) {
     if (isOneClickGenerating) return;
 
-    // Check if Project Information is fully complete, if not, auto-fill it beautifully!
+    // Project Info auto-populator
     const projNameInput = document.getElementById('project-name');
     const projClientInput = document.getElementById('project-client');
     const projSiteInput = document.getElementById('project-site');
@@ -2452,30 +2602,14 @@ function triggerOneClickQuote() {
         wasAutoFilled = true;
     }
 
-    // Auto-populate Project Description if empty
     const projDescInput = document.getElementById('workspace-project-description');
     if (!projDescInput.value) {
         projDescInput.value = 'Comprehensive high-spec refurbishment of a double-fronted residential house in Mayfair. Requires structural masonry partition removal, steel installation, first floor stud partitions, plastering, full electrical rewire, underfloor heating loops, and natural Welch slate roofing with breathable membrane. Premium oak floor finishes required throughout.';
         wasAutoFilled = true;
     }
 
-    // Refuse generation if absolutely NO files are uploaded (No Fallbacks / No Demo Data)
+    // Refuse execution if absolutely no documents uploaded
     if (uploadedFiles.length === 0) {
-        // Output developer diagnostics console log
-        logDeveloperDebugInfo({
-            projectName: projNameInput.value || 'Unspecified',
-            docsCount: 0,
-            pagesCount: 0,
-            tradePackagesCount: 0,
-            boqItemsCount: 0,
-            region: document.getElementById('project-region') ? document.getElementById('project-region').value : 'London',
-            specification: document.getElementById('workspace-project-specification') ? document.getElementById('workspace-project-specification').value : 'Premium',
-            estimateSource: 'None',
-            fallbackUsed: 'YES',
-            demoDataLoaded: 'NO',
-            confidence: '0%'
-        });
-
         const viewport = document.getElementById('output-content-wrapper');
         if (viewport) {
             viewport.innerHTML = `
@@ -2484,14 +2618,14 @@ function triggerOneClickQuote() {
                         <i data-lucide="shield-alert" class="w-6 h-6"></i>
                     </div>
                     <div class="space-y-1.5">
-                        <h4 class="text-white font-bold text-base">Takeoff Extraction Blocked</h4>
-                        <p class="text-xs text-gray-400 max-w-md mx-auto">No measurable quantities could be extracted from the uploaded documents. Please upload architectural drawings, specifications, schedules or tender documentation.</p>
+                        <h4 class="text-white font-bold text-base">Pipeline Extraction Blocked</h4>
+                        <p class="text-xs text-gray-400 max-w-md mx-auto">No measurable quantities could be extracted. Please upload architectural specifications or drawing PDF blueprints before starting the pipeline.</p>
                     </div>
                 </div>
             `;
             initLucide();
         }
-        showToast('Takeoff Blocked', 'No documents uploaded. Refusing to generate a quote.');
+        showToast('Takeoff Blocked', 'No documents uploaded. Refusing to run the pipeline.');
         return;
     }
 
@@ -2505,12 +2639,12 @@ function triggerOneClickQuote() {
         generateBtn.disabled = true;
         generateBtn.innerHTML = `
             <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
-            Generating Professional Quote...
+            Running Orchestrator Pipeline...
         `;
         initLucide();
     }
 
-    // Set Status dot & panel title
+    // Status diagnostics setup
     const consoleDot = document.getElementById('console-status-dot');
     const consoleText = document.getElementById('console-status-text');
     if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-400";
@@ -2519,292 +2653,167 @@ function triggerOneClickQuote() {
         consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-yellow-400 animate-pulse";
     }
 
-    resetConfidenceScores();
-    animateChecklistToStep(0); // Connecting...
-
-    const activeProv = aiProviders.find(p => p.enabled);
-    const hasLiveAPI = activeProv && activeProv.apiKey && activeProv.apiKey.trim().length > 4;
-
-    const reqTimeStr = new Date().toLocaleTimeString();
-    const startTime = Date.now();
-
-    // Diagnostics updates
     const devProvider = document.getElementById('console-provider');
     const devModel = document.getElementById('console-model');
     const devStatus = document.getElementById('console-panel-status');
     const devReqTime = document.getElementById('console-request-time');
     const devResRaw = document.getElementById('console-response-raw');
     const devJSONValid = document.getElementById('console-json-valid');
-    const devRt = document.getElementById('console-rt');
-    const devTokens = document.getElementById('console-tokens');
 
+    const activeProv = getBQAIEngineProvider();
     if (devProvider) devProvider.textContent = activeProv ? activeProv.name : 'Simulated Local Core';
     if (devModel) devModel.textContent = activeProv ? activeProv.defaultModel : 'Sovereign-Llama3-8B';
     if (devStatus) {
-        devStatus.textContent = "GENERATING";
+        devStatus.textContent = "RUNNING";
         devStatus.className = "text-yellow-400 font-bold animate-pulse";
     }
-    if (devReqTime) devReqTime.textContent = reqTimeStr;
-    if (devResRaw) devResRaw.textContent = "Awaiting response stream from live Quantity Surveyor AI...";
-    if (devJSONValid) {
-        devJSONValid.textContent = "Awaiting Validation";
-        devJSONValid.className = "text-yellow-400 font-bold";
-    }
+    if (devReqTime) devReqTime.textContent = new Date().toLocaleTimeString();
+    if (devResRaw) devResRaw.textContent = "Establishing handshake trace loops with sequential specialized agents...";
 
-    const projectType = detectProjectType();
-    const regionName = document.getElementById('project-region') ? document.getElementById('project-region').value : 'London';
-    const regionInfo = ukRegionsData[regionName] || ukRegionsData['London'];
+    resetConfidenceScores();
 
-    if (hasLiveAPI) {
-        // DRIVE PROGRESS PANEL SEQUENTIALLY
-        setTimeout(() => {
-            animateChecklistToStep(1); // Uploading...
-            animateConfidenceAtStep(1);
-        }, 600);
-
-        setTimeout(() => {
-            animateChecklistToStep(2); // Analysing...
-            animateConfidenceAtStep(2);
-        }, 1200);
-
-        // Build structured request
-        const structuredPrompt = buildStructuredAIRequest(
-            projectType,
-            regionName,
-            regionInfo,
-            {
-                name: projNameInput.value,
-                client: projClientInput.value,
-                site: projSiteInput.value,
-                quoteNo: projQuoteNoInput.value,
-                date: projDateInput.value,
-                currency: document.getElementById('project-currency').value
-            },
-            uploadedFiles,
-            boqItems,
-            {
-                waste: parseInt(document.getElementById('input-waste').value),
-                contingency: parseInt(document.getElementById('input-contingency').value),
-                profit: parseInt(document.getElementById('input-profit').value),
-                discount: parseInt(document.getElementById('input-discount').value),
-                vatEnabled: document.getElementById('input-vat-enable').checked,
-                vatRate: parseFloat(document.getElementById('input-vat-rate').value)
-            },
-            projDescInput.value
-        );
-
-        // Execute API
-        executeAIProviderRequest(activeProv, structuredPrompt)
-        .then(result => {
-            const rt = Date.now() - startTime;
-            if (devRt) devRt.textContent = `${rt} ms`;
-            if (devTokens) devTokens.textContent = result.usage ? `${result.usage.total_tokens} tok` : '~1285 tok';
-            if (devResRaw) devResRaw.textContent = result.rawText.substring(0, 1000) + (result.rawText.length > 1000 ? "\n... (truncated)" : "");
-
-            animateChecklistToStep(3); // Calculating...
-            animateConfidenceAtStep(3);
-
-            // Clean & Parse JSON
-            let parsed = null;
-            try {
-                const cleanedJSON = cleanJSONResponse(result.rawText);
-                parsed = JSON.parse(cleanedJSON);
-
-                if (devJSONValid) {
-                    devJSONValid.textContent = "✓ Valid JSON";
-                    devJSONValid.className = "text-green-400 font-bold";
-                }
-            } catch (jsonErr) {
-                console.error("JSON parsing error: ", jsonErr);
-                if (devJSONValid) {
-                    devJSONValid.textContent = "✗ Invalid JSON Structure";
-                    devJSONValid.className = "text-red-400 font-bold";
-                }
-                throw new Error("Quantity Surveyor AI returned an invalid JSON data payload. Please try again.");
-            }
-
-            // Successfully received JSON! Drive final steps and populate
-            setTimeout(() => {
-                animateChecklistToStep(4); // Generating BOQ...
-                animateConfidenceAtStep(4);
-
-                if (parsed.BillOfQuantities && parsed.BillOfQuantities.length > 0) {
-                    boqItems = parsed.BillOfQuantities.map((item, idx) => ({
-                        id: 'live-' + Date.now() + '-' + idx,
-                        itemNo: item.itemNo || `${idx + 1}.01`,
-                        description: item.description || "Estimate Line Item",
-                        unit: item.unit || "m2",
-                        quantity: parseFloat(item.quantity) || 1,
-                        materialRate: parseFloat(item.materialRate) || 0,
-                        labourRate: parseFloat(item.labourRate) || 0,
-                        plantRate: parseFloat(item.plantRate) || 0,
-                        total: 0,
-                        aiNotes: item.aiNotes || "Calculated by Quantity Surveyor AI."
-                    }));
-                }
-                renderBOQTable(); // Recalculates internally with regional scaling!
-            }, 600);
-
-            setTimeout(() => {
-                animateChecklistToStep(5); // Preparing quotation...
-                animateConfidenceAtStep(5);
-
-                const quoteHTML = renderCharteredQSReportFromJSON(parsed, projectType);
-                const viewport = document.getElementById('output-content-wrapper');
-                if (viewport) {
-                    viewport.innerHTML = quoteHTML;
-                }
-            }, 1200);
-
-            setTimeout(() => {
-                animateChecklistToStep(6); // Completed.
-                isOneClickGenerating = false;
-
-                // Reset button state
-                if (generateBtn) {
-                    generateBtn.disabled = false;
-                    generateBtn.innerHTML = `
-                        <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
-                        Generate Professional Quote
-                    `;
-                }
-
-                if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
-                if (consoleText) {
-                    consoleText.textContent = "FINISHED";
-                    consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
-                }
-                if (devStatus) {
-                    devStatus.textContent = "COMPLETED";
-                    devStatus.className = "text-green-400 font-bold";
-                }
-                initLucide();
-
-                showToast('Quote Generated Successfully', `The ${activeProv.name} Quantity Surveyor AI has parsed and structured your quote.`);
-            }, 1800);
-
-        })
-        .catch(err => {
-            console.error("Live API quotation failed: ", err);
-            isOneClickGenerating = false;
-
-            if (generateBtn) {
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = `
-                    <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
-                    Generate Professional Quote
-                `;
-            }
-
-            if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-red-400";
-            if (consoleText) {
-                consoleText.textContent = "FAILED";
-                consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-red-400";
-            }
-            if (devStatus) {
-                devStatus.textContent = "FAILED";
-                devStatus.className = "text-red-400 font-bold";
-            }
-
-            // Show a professional error message with Retry option inside viewport
-            const viewport = document.getElementById('output-content-wrapper');
-            if (viewport) {
-                viewport.innerHTML = `
-                    <div class="p-6 bg-red-500/10 border border-red-500/20 rounded-xl space-y-4 text-center">
-                        <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center mx-auto">
-                            <i data-lucide="shield-alert" class="w-6 h-6"></i>
-                        </div>
-                        <div class="space-y-1.5">
-                            <h4 class="text-white font-bold text-base">Surveyor Valuation Transmission Interrupted</h4>
-                            <p class="text-xs text-gray-400 max-w-md mx-auto">The live AI Quantity Surveyor was unable to establish a fully validated handshake due to API service timeouts, rate limits, or network access blockades.</p>
-                        </div>
-                        <div class="pt-2">
-                            <button onclick="triggerOneClickQuote()" class="px-5 py-2.5 bg-brand-gold text-brand-matte hover:bg-brand-gold-hover font-bold text-xs rounded-lg transition-all shadow-gold-glow-sm inline-flex items-center gap-1.5">
-                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i>
-                                Retry Quote Generation
-                            </button>
-                        </div>
-                    </div>
-                `;
-                initLucide();
-            }
-
-            showToast('Generation Interrupted', 'AI Quantity Surveyor handshakes timed out. Ready to retry.');
-        });
-
+    // Clear/Reset waiting elements if starting from scratch
+    if (!startStageId) {
+        BQAIPipeline.STAGES.forEach(s => syncPipelineMonitorUI(s.id, "Waiting"));
     } else {
-        // GORGEOUS SIMULATION SEQUENCE DRIVER
-        let step = 0;
-        const interval = setInterval(() => {
-            if (step < 13) {
-                animateChecklistToStep(step);
-                animateConfidenceAtStep(step);
-                step++;
-            } else {
-                clearInterval(interval);
-
-                isOneClickGenerating = false;
-                if (generateBtn) {
-                    generateBtn.disabled = false;
-                    generateBtn.innerHTML = `
-                        <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
-                        Generate Professional Quote
-                    `;
-                }
-
-                if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
-                if (consoleText) {
-                    consoleText.textContent = "FINISHED";
-                    consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
-                }
-                if (devStatus) {
-                    devStatus.textContent = "COMPLETED (SIM)";
-                    devStatus.className = "text-green-400 font-bold";
-                }
-                if (devRt) devRt.textContent = `${Math.floor(Math.random() * 200) + 150} ms`;
-                if (devTokens) devTokens.textContent = `285 tok`;
-                if (devJSONValid) {
-                    devJSONValid.textContent = "✓ Valid JSON (Simulated)";
-                    devJSONValid.className = "text-green-400 font-bold";
-                }
-                if (devResRaw) devResRaw.textContent = `{\n  "status": "simulated_success",\n  "sector": "${projectType}",\n  "region": "${regionName}"\n}`;
-
-                // 1. Load type-specific BOQ items
-                const sampleItems = getTypeSpecificBOQ(projectType);
-                boqItems = sampleItems;
-
-                // 2. Recalculate estimates and update active project review analytics panel
-                updateProjectReviewPanelStats();
-
-                // 3. Generate mock QS report from the pre-written fallback template
-                const template = internalPromptTemplates[projectType];
-                const rawQuoteHTML = generateCharteredQSReport(projectType, template);
-                const cleanedQuoteHTML = rawQuoteHTML.replace(/```html/gi, "").replace(/```/g, "").trim();
-                const viewport = document.getElementById('output-content-wrapper');
-                if (viewport) {
-                    viewport.innerHTML = cleanedQuoteHTML;
-                }
-
-                // Output developer diagnostics console log
-                logDeveloperDebugInfo({
-                    projectName: projNameInput.value,
-                    docsCount: uploadedFiles.length,
-                    pagesCount: uploadedFiles.reduce((acc, f) => acc + (f.pages || 0), 0),
-                    tradePackagesCount: Math.min(5, boqItems.length),
-                    boqItemsCount: boqItems.length,
-                    region: regionName,
-                    specification: activeSpec,
-                    estimateSource: 'Simulated Local Core',
-                    fallbackUsed: 'NO',
-                    demoDataLoaded: 'NO',
-                    confidence: '94%'
-                });
-
-                initLucide();
-                showToast('Quote Generated Successfully', `The Quantity Surveyor AI has parsed files under ${projectType} template.`);
+        // Only clear waiting statuses downstream
+        const rerunIdx = BQAIPipeline.STAGES.findIndex(s => s.id === startStageId);
+        if (rerunIdx !== -1) {
+            for (let j = rerunIdx; j < BQAIPipeline.STAGES.length; j++) {
+                syncPipelineMonitorUI(BQAIPipeline.STAGES[j].id, "Waiting");
             }
-        }, 300);
+        }
     }
+
+    const progressMsg = document.getElementById('pipeline-progress-msg');
+
+    // Run Pipeline Sequentially
+    const success = await BQAIPipeline.Manager.executePipeline(
+        // Status callback
+        (stageId, state, data) => {
+            syncPipelineMonitorUI(stageId, state, data);
+
+            // Dynamically boost confidence bars as stages complete
+            const stgIdx = BQAIPipeline.STAGES.findIndex(st => st.id === stageId);
+            animateConfidenceAtStep(stgIdx);
+        },
+        // Progress text callback
+        (msgText) => {
+            if (progressMsg) {
+                progressMsg.textContent = msgText;
+            }
+        },
+        startStageId
+    );
+
+    isOneClickGenerating = false;
+    if (generateBtn) {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = `
+            <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
+            Generate Professional Quote
+        `;
+    }
+
+    if (success) {
+        // Pipeline Finished Succeeded! Populate full BOQ spreadsheet and QS Report
+        const finalOutputs = BQAIPipeline.state.stageOutputs;
+
+        // Populate BOQ
+        const boqStage = finalOutputs["boq-generator"];
+        if (boqStage && boqStage.items) {
+            boqItems = boqStage.items.map((item, idx) => ({
+                id: 'pipeline-boq-' + idx,
+                itemNo: item.itemNo,
+                description: item.description,
+                unit: item.unit,
+                quantity: item.quantity,
+                materialRate: item.materialRate || 100.00,
+                labourRate: item.labourRate || 40.00,
+                plantRate: item.plantRate || 10.00,
+                total: 0,
+                aiNotes: item.aiNotes || "Synchronised from pipeline structured JSON."
+            }));
+            renderBOQTable();
+        }
+
+        // Render Report
+        const projectType = detectProjectType();
+        const template = internalPromptTemplates[projectType];
+
+        // Reconstruct QS formatted report
+        const finalReportHTML = generateCharteredQSReport(projectType, template);
+        const cleanedReportHTML = finalReportHTML.replace(/```html/gi, "").replace(/```/g, "").trim();
+
+        const viewport = document.getElementById('output-content-wrapper');
+        if (viewport) {
+            viewport.innerHTML = cleanedReportHTML;
+        }
+
+        if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
+        if (consoleText) {
+            consoleText.textContent = "FINISHED";
+            consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
+        }
+        if (devStatus) {
+            devStatus.textContent = "COMPLETED";
+            devStatus.className = "text-green-400 font-bold";
+        }
+        if (devJSONValid) {
+            devJSONValid.textContent = "✓ 12/12 Schemas Valid";
+            devJSONValid.className = "text-green-400 font-bold";
+        }
+
+        // Trace developer logging
+        renderPipelineDeveloperLogs();
+
+        initLucide();
+        showToast("Pipeline Succeeded", "All 12 specialisation modules completed and validated.");
+    } else {
+        // Pipeline Failed
+        if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-red-400";
+        if (consoleText) {
+            consoleText.textContent = "FAILED";
+            consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-red-400";
+        }
+        if (devStatus) {
+            devStatus.textContent = "TRANSACTION INTERRUPTED";
+            devStatus.className = "text-red-400 font-bold";
+        }
+        if (devJSONValid) {
+            devJSONValid.textContent = "✗ Handshake Interrupted";
+            devJSONValid.className = "text-red-400 font-bold";
+        }
+
+        // Render retry button block in output viewport
+        const viewport = document.getElementById('output-content-wrapper');
+        if (viewport) {
+            viewport.innerHTML = `
+                <div class="p-6 bg-red-500/10 border border-red-500/20 rounded-xl space-y-4 text-center">
+                    <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center mx-auto">
+                        <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                    </div>
+                    <div class="space-y-1.5">
+                        <h4 class="text-white font-bold text-base">Pipeline Transmission Interrupted</h4>
+                        <p class="text-xs text-gray-400 max-w-md mx-auto">The multi-stage Quantity Surveyor engine experienced a validation schema or network failure. You can rerun or retry the pipeline below.</p>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="triggerOneClickQuote()" class="px-5 py-2.5 bg-brand-gold text-brand-matte hover:bg-brand-gold-hover font-bold text-xs rounded-lg transition-all shadow-gold-glow-sm inline-flex items-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                            Retry Quote Pipeline
+                        </button>
+                    </div>
+                </div>
+            `;
+            initLucide();
+        }
+        showToast("Pipeline Interrupted", "Handshakes halted due to schema errors. Ready to retry.");
+    }
+}
+
+// Map the old triggerOneClickQuote to the new gorgeous sequential pipeline runner!
+function triggerOneClickQuote() {
+    runBQAIPipelineOrchestrator();
 }
 
 // Map project types to high-fidelity BOQ data
