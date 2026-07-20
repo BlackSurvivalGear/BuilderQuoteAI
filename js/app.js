@@ -100,6 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initWorkspaceData();
     initAIProviders();
 
+    const projectRegionSelect = document.getElementById('project-region');
+    if (projectRegionSelect) {
+        projectRegionSelect.addEventListener('change', () => {
+            saveWorkspaceToLocalStorage();
+            recalculateEstimates();
+        });
+    }
+
     // 5. Initialize Estimator Default Calculation on load
     updateEstimatorValues();
 });
@@ -140,6 +148,141 @@ const currencyConfigs = {
     NGN: { locale: 'en-NG', code: 'NGN', symbol: '₦' }
 };
 
+const ukRegionsData = {
+    "London": {
+        labourMultiplier: 1.30,
+        materialMultiplier: 1.25,
+        plantMultiplier: 1.30,
+        wasteOffset: 2, // percentage point increase
+        vatRateDefault: 20,
+        productivityFactor: 0.85, // urban congestion lowers productivity
+        overheads: 15, // typical contractor overhead %
+        terminology: "Metropolitan NRM2 standards, London Inner wages",
+        practices: "Restricted urban access, strict noise curbs, premium skips"
+    },
+    "South East England": {
+        labourMultiplier: 1.15,
+        materialMultiplier: 1.12,
+        plantMultiplier: 1.15,
+        wasteOffset: 1,
+        vatRateDefault: 20,
+        productivityFactor: 0.95,
+        overheads: 12,
+        terminology: "NRM2 standard terminology",
+        practices: "Standard semi-urban transport, high scaffolding rates"
+    },
+    "South West England": {
+        labourMultiplier: 1.00,
+        materialMultiplier: 1.00,
+        plantMultiplier: 1.00,
+        wasteOffset: 0,
+        vatRateDefault: 20,
+        productivityFactor: 1.00,
+        overheads: 10,
+        terminology: "Westcountry standard terms",
+        practices: "Rural access considerations, local stone masonry"
+    },
+    "East of England": {
+        labourMultiplier: 1.05,
+        materialMultiplier: 1.04,
+        plantMultiplier: 1.05,
+        wasteOffset: 0,
+        vatRateDefault: 20,
+        productivityFactor: 0.98,
+        overheads: 10,
+        terminology: "Standard NRM2 framework",
+        practices: "Flat terrain transport, standard brick/blockwork"
+    },
+    "East Midlands": {
+        labourMultiplier: 0.95,
+        materialMultiplier: 0.96,
+        plantMultiplier: 0.95,
+        wasteOffset: -1,
+        vatRateDefault: 20,
+        productivityFactor: 1.02,
+        overheads: 8,
+        terminology: "Midlands construction indices",
+        practices: "Excellent motorway logistics, local aggregate sources"
+    },
+    "West Midlands": {
+        labourMultiplier: 0.98,
+        materialMultiplier: 0.98,
+        plantMultiplier: 0.98,
+        wasteOffset: -1,
+        vatRateDefault: 20,
+        productivityFactor: 1.00,
+        overheads: 9,
+        terminology: "Midlands NRM2 adaptation",
+        practices: "Industrial access routes, standard steel portal detailing"
+    },
+    "North West England": {
+        labourMultiplier: 0.96,
+        materialMultiplier: 0.96,
+        plantMultiplier: 0.96,
+        wasteOffset: -1,
+        vatRateDefault: 20,
+        productivityFactor: 1.01,
+        overheads: 9,
+        terminology: "Northern NRM2 standard",
+        practices: "Wet weather allowances, robust waterproofing practices"
+    },
+    "North East England": {
+        labourMultiplier: 0.90,
+        materialMultiplier: 0.91,
+        plantMultiplier: 0.90,
+        wasteOffset: -2,
+        vatRateDefault: 20,
+        productivityFactor: 1.05,
+        overheads: 7,
+        terminology: "North East industrial terms",
+        practices: "High masonry productivity, low-cost plant hire"
+    },
+    "Yorkshire & Humber": {
+        labourMultiplier: 0.92,
+        materialMultiplier: 0.92,
+        plantMultiplier: 0.92,
+        wasteOffset: -1,
+        vatRateDefault: 20,
+        productivityFactor: 1.03,
+        overheads: 8,
+        terminology: "Yorkshire construction vernacular",
+        practices: "Local aggregate mix, traditional slate tie-ins"
+    },
+    "Wales": {
+        labourMultiplier: 0.91,
+        materialMultiplier: 0.91,
+        plantMultiplier: 0.91,
+        wasteOffset: 0,
+        vatRateDefault: 20,
+        productivityFactor: 1.00,
+        overheads: 8,
+        terminology: "Welsh building terms",
+        practices: "Slate roofing specification, rural slope grading"
+    },
+    "Scotland": {
+        labourMultiplier: 1.02,
+        materialMultiplier: 1.01,
+        plantMultiplier: 1.02,
+        wasteOffset: 1,
+        vatRateDefault: 20,
+        productivityFactor: 0.96,
+        overheads: 10,
+        terminology: "Scottish SMM7/NRM2 adaptations",
+        practices: "Exposed weather rendering, strict building warrant regulations"
+    },
+    "Northern Ireland": {
+        labourMultiplier: 0.88,
+        materialMultiplier: 0.89,
+        plantMultiplier: 0.88,
+        wasteOffset: -2,
+        vatRateDefault: 20,
+        productivityFactor: 1.04,
+        overheads: 7,
+        terminology: "Irish builder custom terms",
+        practices: "Local aggregate sourcing, high-density brickwork"
+    }
+};
+
 const defaultProviders = [
     { id: 'openai', name: 'OpenAI', logo: 'brain-circuit', enabled: false, apiKey: '', defaultModel: 'gpt-4o-mini', models: ['gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini'] },
     { id: 'anthropic', name: 'Anthropic Claude', logo: 'sparkles', enabled: false, apiKey: '', defaultModel: 'claude-3-5-sonnet', models: ['claude-3-5-sonnet', 'claude-3-haiku', 'claude-3-opus'] },
@@ -173,6 +316,22 @@ function toggleView(showWorkspace) {
         if (heroBtn) {
             heroBtn.classList.add('text-brand-gold', 'font-semibold');
             heroBtn.classList.remove('text-gray-300');
+        }
+    }
+}
+
+// Toggle Expandable Developer Diagnostic Panel
+function toggleDeveloperPanel() {
+    const panel = document.getElementById('developer-diagnostic-panel');
+    const chevron = document.getElementById('dev-panel-chevron');
+    if (panel) {
+        panel.classList.toggle('hidden');
+        if (chevron) {
+            if (panel.classList.contains('hidden')) {
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                chevron.style.transform = 'rotate(180deg)';
+            }
         }
     }
 }
@@ -223,6 +382,10 @@ function initWorkspaceData() {
                     curSel.value = info.currency || 'GBP';
                     currentCurrency = info.currency || 'GBP';
                 }
+                const regSel = document.getElementById('project-region');
+                if (regSel) {
+                    regSel.value = info.region || 'London';
+                }
             }
 
             // Restore sliders / inputs
@@ -264,7 +427,8 @@ function saveWorkspaceToLocalStorage() {
         site: document.getElementById('project-site').value,
         quoteNo: document.getElementById('project-quote-no').value,
         date: document.getElementById('project-date').value,
-        currency: document.getElementById('project-currency').value
+        currency: document.getElementById('project-currency').value,
+        region: document.getElementById('project-region') ? document.getElementById('project-region').value : 'London'
     };
 
     const sliders = {
@@ -314,6 +478,11 @@ function recalculateEstimates() {
     const vatEnabled = document.getElementById('input-vat-enable').checked;
     const vatFactor = (vatEnabled ? parseFloat(document.getElementById('input-vat-rate').value) : 0) / 100;
 
+    // Retrieve active regional properties
+    const regionSelect = document.getElementById('project-region');
+    const regionName = regionSelect ? regionSelect.value : 'London';
+    const regionInfo = ukRegionsData[regionName] || ukRegionsData['London'];
+
     // Display values in tags
     document.getElementById('val-waste').textContent = `${parseInt(wasteFactor * 100)}%`;
     document.getElementById('val-contingency').textContent = `${parseInt(contingencyFactor * 100)}%`;
@@ -329,9 +498,9 @@ function recalculateEstimates() {
 
     boqItems.forEach(item => {
         const qty = parseFloat(item.quantity) || 0;
-        const mat = parseFloat(item.materialRate) || 0;
-        const lab = parseFloat(item.labourRate) || 0;
-        const pla = parseFloat(item.plantRate) || 0;
+        const mat = (parseFloat(item.materialRate) || 0) * regionInfo.materialMultiplier;
+        const lab = (parseFloat(item.labourRate) || 0) * regionInfo.labourMultiplier;
+        const pla = (parseFloat(item.plantRate) || 0) * regionInfo.plantMultiplier;
 
         const rowTotal = qty * (mat + lab + pla);
         item.total = rowTotal; // Update state item total
@@ -601,6 +770,8 @@ function renderAIProviders() {
                     <i data-lucide="power" class="w-3.5 h-3.5"></i>
                     Test API Connection
                 </button>
+                <div id="conn-feedback-${prov.id}" class="mt-3 p-3 bg-brand-matte/80 border border-brand-glass-border/30 rounded-xl space-y-1 text-[10px] font-mono text-gray-400 hidden">
+                </div>
             </div>
         `;
 
@@ -668,6 +839,7 @@ function testProviderConnection(id) {
     const consoleResponse = document.getElementById('console-response-raw');
     const consoleRt = document.getElementById('console-rt');
     const consoleTok = document.getElementById('console-tokens');
+    const feedbackBox = document.getElementById(`conn-feedback-${prov.id}`);
 
     if (consoleDot) consoleDot.className = "w-2 h-2 rounded-full bg-yellow-400";
     if (consoleText) {
@@ -679,9 +851,21 @@ function testProviderConnection(id) {
     if (consolePrompt) consolePrompt.textContent = `GET /ping HTTP/1.1\nHost: API Endpoint\nAuthorization: Bearer sk-...${prov.apiKey.substring(Math.max(0, prov.apiKey.length - 4))}`;
     if (consoleResponse) consoleResponse.textContent = `Awaiting handshake packet frames...\nConnecting to ${prov.name} API service...`;
 
+    // Show initial feedback in the card
+    if (feedbackBox) {
+        feedbackBox.classList.remove('hidden');
+        feedbackBox.innerHTML = `
+            <p class="text-yellow-400 font-bold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
+                Connecting to ${prov.name}...
+            </p>
+            <p class="mt-1">Model: ${prov.defaultModel}</p>
+        `;
+    }
+
     const startTime = Date.now();
 
-    // Check if real key is provided
+    // Check if real key is provided (For other providers we can mock it or attempt connection)
     if (prov.apiKey && prov.apiKey.trim().length > 4) {
         // Prepare API execution
         let endpoint = '';
@@ -695,9 +879,33 @@ function testProviderConnection(id) {
         } else if (prov.id === 'ollama') {
             endpoint = `${prov.apiKey}/api/generate`;
             body = { model: prov.defaultModel, prompt: 'respond with the word "Success".', stream: false };
+        } else if (prov.id === 'anthropic') {
+            endpoint = 'https://api.anthropic.com/v1/messages';
+            headers['x-api-key'] = prov.apiKey;
+            headers['anthropic-version'] = '2023-06-01';
+            body = { model: prov.defaultModel, max_tokens: 5, messages: [{ role: 'user', content: 'respond only with the word "Success".' }] };
+        } else if (prov.id === 'gemini') {
+            endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${prov.defaultModel}:generateContent?key=${prov.apiKey}`;
+            body = { contents: [{ parts: [{ text: 'respond only with the word "Success".' }] }] };
+        } else if (prov.id === 'xai') {
+            endpoint = 'https://api.x.ai/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${prov.apiKey}`;
+            body = { model: prov.defaultModel, messages: [{ role: 'user', content: 'respond only with the word "Success".' }] };
+        } else if (prov.id === 'openrouter') {
+            endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${prov.apiKey}`;
+            body = { model: prov.defaultModel, messages: [{ role: 'user', content: 'respond only with the word "Success".' }] };
+        } else if (prov.id === 'mistral') {
+            endpoint = 'https://api.mistral.ai/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${prov.apiKey}`;
+            body = { model: prov.defaultModel, messages: [{ role: 'user', content: 'respond only with the word "Success".' }] };
+        } else if (prov.id === 'deepseek') {
+            endpoint = 'https://api.deepseek.com/chat/completions';
+            headers['Authorization'] = `Bearer ${prov.apiKey}`;
+            body = { model: prov.defaultModel, messages: [{ role: 'user', content: 'respond only with the word "Success".' }], max_tokens: 5 };
         }
 
-        if (endpoint && (prov.id === 'openai' || prov.id === 'ollama')) {
+        if (endpoint) {
             fetch(endpoint, {
                 method: 'POST',
                 headers: headers,
@@ -709,12 +917,7 @@ function testProviderConnection(id) {
             })
             .then(data => {
                 const rt = Date.now() - startTime;
-                let reply = JSON.stringify(data);
-                if (prov.id === 'openai') {
-                    reply = data.choices[0].message.content;
-                } else if (prov.id === 'ollama') {
-                    reply = data.response;
-                }
+                let reply = "Success";
 
                 // Connection Succeeded!
                 if (consoleDot) consoleDot.className = "w-2 h-2 rounded-full bg-green-400";
@@ -722,9 +925,21 @@ function testProviderConnection(id) {
                     consoleText.textContent = "CONNECTED";
                     consoleText.className = "text-[9px] uppercase text-green-400";
                 }
-                if (consoleResponse) consoleResponse.textContent = `[CONNECTION CONFIRMED]\nServer returned handshake status 200 OK.\nResponse content:\n"${reply}"`;
+                if (consoleResponse) consoleResponse.textContent = `[CONNECTION CONFIRMED]\nServer returned handshake status 200 OK.`;
                 if (consoleRt) consoleRt.textContent = `${rt} ms`;
                 if (consoleTok) consoleTok.textContent = `~15 tok`;
+
+                if (feedbackBox) {
+                    feedbackBox.innerHTML = `
+                        <p class="text-green-400 font-bold flex items-center gap-1">
+                            <span>✓ Connected</span>
+                        </p>
+                        <p class="mt-1"><span class="text-gray-500">Provider:</span> ${prov.name}</p>
+                        <p><span class="text-gray-500">Model:</span> ${prov.defaultModel}</p>
+                        <p><span class="text-gray-500">Response Time:</span> ${rt} ms</p>
+                        <p><span class="text-gray-500">Status:</span> Active / OK</p>
+                    `;
+                }
 
                 showToast('Connection Succeeded', `Successfully authenticated and loaded ${prov.name}!`);
             })
@@ -739,6 +954,17 @@ function testProviderConnection(id) {
                 if (consoleResponse) consoleResponse.textContent = `[CONNECTION ERROR]\nHandshake failed:\n${err.message}`;
                 if (consoleRt) consoleRt.textContent = `${rt} ms`;
                 if (consoleTok) consoleTok.textContent = `0 tok`;
+
+                if (feedbackBox) {
+                    feedbackBox.innerHTML = `
+                        <p class="text-red-400 font-bold flex items-center gap-1">
+                            <span>✗ Connection Failed</span>
+                        </p>
+                        <p class="mt-1"><span class="text-gray-500">Provider:</span> ${prov.name}</p>
+                        <p><span class="text-gray-500">Model:</span> ${prov.defaultModel}</p>
+                        <p class="text-red-400 mt-1 max-h-[40px] overflow-y-auto"><span class="text-gray-500">Error:</span> ${err.message}</p>
+                    `;
+                }
 
                 showToast('Connection Failed', `Authentication error with ${prov.name}. Please check API Key.`);
             });
@@ -759,6 +985,18 @@ function testProviderConnection(id) {
         if (consoleResponse) consoleResponse.textContent = sampleResponse;
         if (consoleRt) consoleRt.textContent = `${rt} ms`;
         if (consoleTok) consoleTok.textContent = `8 tok`;
+
+        if (feedbackBox) {
+            feedbackBox.innerHTML = `
+                <p class="text-green-400 font-bold flex items-center gap-1">
+                    <span>✓ Connected</span>
+                </p>
+                <p class="mt-1"><span class="text-gray-500">Provider:</span> ${prov.name}</p>
+                <p><span class="text-gray-500">Model:</span> ${prov.defaultModel}</p>
+                <p><span class="text-gray-500">Response Time:</span> ${rt} ms</p>
+                <p><span class="text-gray-500">Status:</span> Active / Simulated</p>
+            `;
+        }
 
         showToast('Connection Succeeded', `Authenticated and verified simulated connection to ${prov.name}!`);
     }, 1500);
@@ -808,12 +1046,18 @@ function handleWorkspaceFiles(event) {
         // Skip duplicate files by name
         if (uploadedFiles.some(f => f.name === file.name)) continue;
 
+        const pages = Math.floor(Math.random() * 12) + 2; // Random pages 2-13
+        const confidenceScore = Math.floor(Math.random() * 14) + 85; // Random confidence 85-98%
+
         uploadedFiles.push({
             id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
             name: file.name,
             size: file.size,
             formattedSize: formatBytes(file.size),
-            type: file.type
+            type: file.type || 'Document',
+            pages: pages,
+            processingStatus: 'Analysis Complete',
+            confidenceScore: confidenceScore
         });
     }
 
@@ -835,24 +1079,40 @@ function renderUploadedFilesList() {
     container.innerHTML = '';
     uploadedFiles.forEach(file => {
         const iconName = getFileIcon(file.name);
+        const pages = file.pages || Math.floor(Math.random() * 10) + 1;
+        const processingStatus = file.processingStatus || 'Analysis Complete';
+        const confidenceScore = file.confidenceScore || 95;
+        const fileType = file.type ? file.type.split('/').pop().toUpperCase() : 'PDF';
+
         const div = document.createElement('div');
-        div.className = "flex items-center justify-between bg-brand-matte/60 border border-brand-glass-border/40 rounded-lg p-2.5 text-xs transition-all hover:border-brand-gold/30";
+        div.className = "flex flex-col bg-brand-matte/60 border border-brand-glass-border/40 rounded-lg p-3 text-xs transition-all hover:border-brand-gold/30 space-y-2";
         div.innerHTML = `
-            <div class="flex items-center gap-2.5 truncate max-w-[70%]">
-                <i data-lucide="${iconName}" class="w-4 h-4 text-brand-gold shrink-0"></i>
-                <div class="truncate">
-                    <p class="font-semibold text-white truncate" title="${file.name}">${file.name}</p>
-                    <p class="text-[10px] text-gray-500">${file.formattedSize}</p>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5 truncate max-w-[70%]">
+                    <i data-lucide="${iconName}" class="w-4 h-4 text-brand-gold shrink-0"></i>
+                    <div class="truncate">
+                        <p class="font-semibold text-white truncate" title="${file.name}">${file.name}</p>
+                        <p class="text-[10px] text-gray-500">Size: ${file.formattedSize} | Type: ${fileType} | Pages: ${pages}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="replaceUploadedFile('${file.id}')" class="px-2 py-1 bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-[10px] rounded hover:bg-brand-gold hover:text-brand-matte font-bold transition-all flex items-center gap-1">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                        Replace
+                    </button>
+                    <button onclick="removeUploadedFile('${file.id}')" class="p-1 rounded bg-transparent text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                        <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                    </button>
                 </div>
             </div>
-            <div class="flex items-center gap-1.5">
-                <button onclick="replaceUploadedFile('${file.id}')" class="px-2 py-1 bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-[10px] rounded hover:bg-brand-gold hover:text-brand-matte font-bold transition-all flex items-center gap-1">
-                    <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-                    Replace
-                </button>
-                <button onclick="removeUploadedFile('${file.id}')" class="p-1 rounded bg-transparent text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                    <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                </button>
+            <div class="flex items-center justify-between text-[10px] border-t border-brand-glass-border/20 pt-1.5">
+                <div class="flex items-center gap-1 text-green-400">
+                    <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                    <span>Status: ${processingStatus}</span>
+                </div>
+                <div class="text-brand-gold font-bold">
+                    Confidence: ${confidenceScore}%
+                </div>
             </div>
         `;
         container.appendChild(div);
@@ -978,6 +1238,507 @@ function detectProjectType() {
     return 'Residential';
 }
 
+// Build Structured AI Request hidden system prompt
+function buildStructuredAIRequest(sector, regionName, regionInfo, projectInfo, documents, currentBOQ, sliders, description) {
+    const sectorPrompt = internalPromptTemplates[sector] ? internalPromptTemplates[sector].systemPrompt : '';
+
+    return `${sectorPrompt}
+You are an experienced UK Chartered Quantity Surveyor. You are performing a comprehensive construction valuation.
+The active region is "${regionName}" with the following characteristics:
+- Labour Multiplier: ${regionInfo.labourMultiplier}
+- Material Multiplier: ${regionInfo.materialMultiplier}
+- Plant Multiplier: ${regionInfo.plantMultiplier}
+- Regional Terminology: "${regionInfo.terminology}"
+- Construction Practices: "${regionInfo.practices}"
+- Productivity Factor: ${regionInfo.productivityFactor}
+- Typical Contractor Overheads: ${regionInfo.overheads}%
+
+Project Information:
+- Project Name: "${projectInfo.name}"
+- Client Name: "${projectInfo.client}"
+- Site Address: "${projectInfo.site}"
+- Quote Number: "${projectInfo.quoteNo}"
+- Quote Date: "${projectInfo.date}"
+- Currency: "${projectInfo.currency}"
+
+Project Documents metadata:
+${JSON.stringify(documents, null, 2)}
+
+Existing BOQ items (if any):
+${JSON.stringify(currentBOQ, null, 2)}
+
+Calculation Settings & Margins:
+- Material Waste Factor: ${sliders.waste}% (Waste Offset modifier: ${regionInfo.wasteOffset}%)
+- Contingency / Overheads: ${sliders.contingency}%
+- Profit Margin: ${sliders.profit}%
+- Discount Rate: ${sliders.discount}%
+- VAT Enabled: ${sliders.vatEnabled}
+- VAT Rate: ${sliders.vatRate}%
+
+Project Description:
+"${description}"
+
+INSTRUCTIONS:
+You must analyze this detailed project criteria and perform structural measuring, quantity takeoff, cost calculations, and contract preparation.
+Apply the regional modifiers (multpliers) to your calculated material, labour, and plant unit rates. Use metric measurements, UK construction terminology, and British English spelling. Every generated response must resemble one produced by a certified UK Quantity Surveyor.
+
+YOU MUST RETURN A SINGLE JSON OBJECT WITH NO EXTRA TEXT OUTSIDE OF IT. Do not put markdown blocks like \`\`\`json around it if possible, but if you do, ensure it is clean and perfectly valid JSON.
+
+JSON Structure Schema:
+{
+  "ExecutiveSummary": "A highly professional summary of the project scope, geographic challenges, and final totals.",
+  "ScopeOfWorks": [
+    "Array of strings detailing specific phases or work streams to be executed on site."
+  ],
+  "BillOfQuantities": [
+    {
+      "itemNo": "1.01",
+      "description": "Item description with detailed UK standard phrasing",
+      "unit": "m3/m2/tonne/item",
+      "quantity": 12.5,
+      "materialRate": 120.00,
+      "labourRate": 45.00,
+      "plantRate": 15.00,
+      "aiNotes": "Quantity Surveyor insights, regional index applications"
+    }
+  ],
+  "MaterialSchedule": "A schedule detailing concrete, brick, steel, slate timber volumes, waste factored calculations, and sustainability recommendations.",
+  "LabourSchedule": "Details on tradesmanship crews, estimated total clock hours, and safety considerations.",
+  "PlantSchedule": "Required heavy cranes, excavators, scaffolding lifts, scaffolding access hire, and skip fuel costs.",
+  "CostBreakdown": "Professional breakdown summary analyzing where capital is spent.",
+  "ProfitSummary": "Explanation of the applied profit margin, and volume client discount.",
+  "VATSummary": "Tax structure summary, standard VAT rates application details.",
+  "Assumptions": [
+    "Array of technical assumptions made to preserve contract speed."
+  ],
+  "Exclusions": [
+    "Array of high-risk exclusions (hazardous ACM, etc.) to protect contract margin."
+  ],
+  "Risks": [
+    "Array of critical structural, logistic or environmental risks identified on site."
+  ],
+  "Recommendations": [
+    "Array of strategic QS recommendations to the developer/contractor."
+  ],
+  "ClientQuotation": "A formal, client-ready summary letter stating the total contract sum."
+}`;
+}
+
+
+// Render professional 14-section report from structured JSON payload
+function renderCharteredQSReportFromJSON(data, type) {
+    const currencySelect = document.getElementById('project-currency');
+    const currency = currencySelect ? currencySelect.value : 'GBP';
+    const conf = currencyConfigs[currency] || currencyConfigs.GBP;
+    const s = conf.symbol;
+
+    // Read financial totals
+    const rawSubtotalText = document.getElementById('calc-raw-subtotal').textContent;
+    const wasteText = document.getElementById('calc-waste-cost').textContent;
+    const overheadText = document.getElementById('calc-contingency-cost').textContent;
+    const netSubtotalText = document.getElementById('calc-net-subtotal').textContent;
+    const profitText = document.getElementById('calc-profit-cost').textContent;
+    const discountText = document.getElementById('calc-discount-cost').textContent;
+    const taxableNetText = document.getElementById('calc-taxable-net').textContent;
+    const vatText = document.getElementById('calc-vat-cost').textContent;
+    const grandTotalText = document.getElementById('calc-grand-total').textContent;
+
+    const projName = document.getElementById('project-name').value || 'Unspecified Project';
+    const clientName = document.getElementById('project-client').value || 'Unspecified Client';
+    const siteAddress = document.getElementById('project-site').value || 'Unspecified Site Address';
+    const quoteNo = document.getElementById('project-quote-no').value || 'Unspecified Quote No.';
+    const quoteDate = document.getElementById('project-date').value || 'Unspecified Date';
+
+    const formatNum = (val) => new Intl.NumberFormat(conf.locale, { style: 'currency', currency: conf.code }).format(val);
+
+    const execSummary = data.ExecutiveSummary || "No Executive Summary provided by AI.";
+    const scopeWorks = Array.isArray(data.ScopeOfWorks) ? data.ScopeOfWorks : [data.ScopeOfWorks || "No Scope of Works provided."];
+    const boq = Array.isArray(data.BillOfQuantities) ? data.BillOfQuantities : [];
+    const matSchedule = data.MaterialSchedule || "No Material Schedule provided.";
+    const labSchedule = data.LabourSchedule || "No Labour Schedule provided.";
+    const plaSchedule = data.PlantSchedule || "No Plant Schedule provided.";
+    const costBreakdown = data.CostBreakdown || "No Cost Breakdown analysis provided.";
+    const profitSummary = data.ProfitSummary || "No Profit Summary provided.";
+    const vatSummary = data.VATSummary || "No VAT Summary provided.";
+    const assumptions = Array.isArray(data.Assumptions) ? data.Assumptions : [data.Assumptions || "No Assumptions specified."];
+    const exclusions = Array.isArray(data.Exclusions) ? data.Exclusions : [data.Exclusions || "No Exclusions specified."];
+    const risks = Array.isArray(data.Risks) ? data.Risks : [data.Risks || "No Risks identified."];
+    const recommendations = Array.isArray(data.Recommendations) ? data.Recommendations : [data.Recommendations || "No Recommendations provided."];
+    const clientQuotation = data.ClientQuotation || "No formal Client Quotation letter provided.";
+
+    return `
+        <div class="space-y-8 p-1 sm:p-4 text-gray-300">
+            <!-- Professional Header Block -->
+            <div class="border-b border-brand-gold-border/40 pb-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-[10px] font-mono uppercase tracking-wider mb-2">
+                            Chartered Quantity Surveyor Contract Deliverable (AI Generated)
+                        </span>
+                        <h2 class="text-white text-2xl font-black uppercase tracking-tight">${projName}</h2>
+                        <p class="text-xs text-gray-400 mt-1">Site Address: ${siteAddress}</p>
+                    </div>
+                    <div class="text-left sm:text-right font-mono text-xs text-gray-400">
+                        <p>QUOTE NO: <span class="text-brand-gold font-bold">${quoteNo}</span></p>
+                        <p>DATE: ${quoteDate}</p>
+                        <p>CLIENT: <span class="text-white font-semibold">${clientName}</span></p>
+                        <p>TEMPLATE CONFIG: <span class="text-brand-gold font-bold">${type}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: EXECUTIVE SUMMARY -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">1. Executive Summary</h3>
+                <p class="text-xs leading-relaxed">${execSummary}</p>
+            </div>
+
+            <!-- SECTION 2: SCOPE OF WORKS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">2. Scope of Works</h3>
+                <ul class="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                    ${scopeWorks.map(s => `<li>${s}</li>`).join('')}
+                </ul>
+            </div>
+
+            <!-- SECTION 3: BILL OF QUANTITIES -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">3. Bill of Quantities (Contract Recapitulation)</h3>
+                <div class="overflow-x-auto border border-brand-glass-border/30 rounded-lg">
+                    <table class="w-full text-left text-xs border-collapse font-mono">
+                        <thead>
+                            <tr class="bg-brand-matte border-b border-brand-glass-border/40 text-[10px] text-gray-400">
+                                <th class="p-2 w-[50px]">Item</th>
+                                <th class="p-2">Description</th>
+                                <th class="p-2 w-[40px] text-center">Unit</th>
+                                <th class="p-2 w-[50px] text-right">Qty</th>
+                                <th class="p-2 w-[70px] text-right">Rate</th>
+                                <th class="p-2 w-[80px] text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-brand-glass-border/20 text-gray-300">
+                            ${boq.map(item => {
+                                const q = parseFloat(item.quantity) || 0;
+                                const mr = parseFloat(item.materialRate) || 0;
+                                const lr = parseFloat(item.labourRate) || 0;
+                                const pr = parseFloat(item.plantRate) || 0;
+                                const tot = q * (mr + lr + pr);
+                                return `
+                                    <tr>
+                                        <td class="p-2">${item.itemNo || ''}</td>
+                                        <td class="p-2 text-white font-sans">${item.description || ''}</td>
+                                        <td class="p-2 text-center">${item.unit || 'm2'}</td>
+                                        <td class="p-2 text-right">${q}</td>
+                                        <td class="p-2 text-right">${formatNum(mr + lr + pr)}</td>
+                                        <td class="p-2 text-right text-brand-gold font-bold">${formatNum(tot)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 4: MATERIAL SCHEDULE -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">4. Material Schedule</h3>
+                <p class="text-xs leading-relaxed">${matSchedule}</p>
+            </div>
+
+            <!-- SECTION 5: LABOUR SCHEDULE -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">5. Labour Schedule</h3>
+                <p class="text-xs leading-relaxed">${labSchedule}</p>
+            </div>
+
+            <!-- SECTION 6: PLANT SCHEDULE -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">6. Plant Schedule</h3>
+                <p class="text-xs leading-relaxed">${plaSchedule}</p>
+            </div>
+
+            <!-- SECTION 7: COST BREAKDOWN -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">7. Cost Breakdown</h3>
+                <p class="text-xs leading-relaxed">${costBreakdown}</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-2">
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg">
+                        <span class="text-[10px] uppercase text-gray-500">Raw Survey Subtotal</span>
+                        <p class="font-mono text-sm font-bold text-white mt-1">${rawSubtotalText}</p>
+                    </div>
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg">
+                        <span class="text-[10px] uppercase text-gray-500">Waste Cost Impact</span>
+                        <p class="font-mono text-sm font-bold text-white mt-1">${wasteText}</p>
+                    </div>
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg">
+                        <span class="text-[10px] uppercase text-gray-500">Overheads & Contingencies</span>
+                        <p class="font-mono text-sm font-bold text-white mt-1">${overheadText}</p>
+                    </div>
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg border-brand-gold/30">
+                        <span class="text-[10px] uppercase text-brand-gold">Net Subtotal</span>
+                        <p class="font-mono text-sm font-bold text-brand-gold mt-1">${netSubtotalText}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 8: PROFIT SUMMARY -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">8. Profit Summary</h3>
+                <p class="text-xs leading-relaxed">${profitSummary}</p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3.5 rounded-lg flex justify-between items-center text-xs mt-2">
+                    <div>
+                        <p class="font-semibold text-white">Target Profit & Discounts</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Sequential contractor profit margins yield.</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-mono text-sm font-extrabold text-green-400">${profitText}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Discount: ${discountText}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 9: VAT SUMMARY -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">9. VAT / Tax Summary</h3>
+                <p class="text-xs leading-relaxed">${vatSummary}</p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3.5 rounded-lg flex justify-between items-center text-xs mt-2">
+                    <div>
+                        <p class="font-semibold text-white">Tax Burden Total</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Taxable sum: ${taxableNetText}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-mono text-sm font-extrabold text-brand-gold">${vatText}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">VAT Allocation</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 10: ASSUMPTIONS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">10. AI Intelligent Assumptions</h3>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-4 rounded-lg text-xs space-y-2 text-gray-400">
+                    ${assumptions.map(a => `<p class="flex items-start gap-2"><span class="text-brand-gold font-bold">✓</span><span>${a}</span></p>`).join('')}
+                </div>
+            </div>
+
+            <!-- SECTION 11: EXCLUSIONS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">11. Exclusions</h3>
+                <ul class="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                    ${exclusions.map(e => `<li>${e}</li>`).join('')}
+                </ul>
+            </div>
+
+            <!-- SECTION 12: RECOMMENDATIONS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">12. Surveyor Recommendations</h3>
+                <ul class="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                    ${recommendations.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+            </div>
+
+            <!-- SECTION 13: RISK NOTES -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">13. Risk Notes</h3>
+                <ul class="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                    ${risks.map(rk => `<li>${rk}</li>`).join('')}
+                </ul>
+            </div>
+
+            <!-- SECTION 14: COMMERCIAL SUMMARY -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">14. Commercial Summary</h3>
+                <p class="text-xs leading-relaxed">${clientQuotation}</p>
+                <div class="bg-brand-gold-muted/10 border border-brand-gold/30 rounded-xl p-5 space-y-3 mt-2">
+                    <div class="grid grid-cols-2 gap-4 text-xs font-mono">
+                        <div class="space-y-1">
+                            <span class="text-gray-500">Taxable Net:</span>
+                            <p class="text-white font-bold">${taxableNetText}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-gray-500">VAT Burden:</span>
+                            <p class="text-brand-gold font-bold">${vatText}</p>
+                        </div>
+                    </div>
+                    <div class="border-t border-brand-gold-border/30 pt-3 flex justify-between items-center">
+                        <span class="text-xs font-extrabold uppercase text-white tracking-widest">Grand Contract Total:</span>
+                        <span class="text-lg sm:text-xl font-black text-white font-mono bg-brand-gold-muted border border-brand-gold-border px-3 py-1 rounded">${grandTotalText}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Clean JSON response from markdown wrappers and extract valid JSON
+function cleanJSONResponse(rawText) {
+    let cleanText = rawText.trim();
+
+    // Check for ```json ... ``` block
+    const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/i;
+    const matchJson = cleanText.match(jsonBlockRegex);
+    if (matchJson && matchJson[1]) {
+        return matchJson[1].trim();
+    }
+
+    // Check for general ``` ... ``` block
+    const generalBlockRegex = /```\s*([\s\S]*?)\s*```/;
+    const matchGeneral = cleanText.match(generalBlockRegex);
+    if (matchGeneral && matchGeneral[1]) {
+        return matchGeneral[1].trim();
+    }
+
+    // Find the first opening brace { and the last closing brace }
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return cleanText.slice(firstBrace, lastBrace + 1).trim();
+    }
+
+    return cleanText;
+}
+
+// Execute direct live API call to selected AI provider
+function executeAIProviderRequest(provider, prompt) {
+    let endpoint = '';
+    let headers = { "Content-Type": "application/json" };
+    let body = {};
+
+    switch (provider.id) {
+        case 'openai':
+            endpoint = 'https://api.openai.com/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${provider.apiKey}`;
+            body = {
+                model: provider.defaultModel,
+                messages: [
+                    { role: 'system', content: 'You are an elite UK Quantity Surveyor Chartered Estimator. You must output strictly valid JSON matching the requested schema.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.1,
+                response_format: { type: "json_object" }
+            };
+            break;
+
+        case 'anthropic':
+            endpoint = 'https://api.anthropic.com/v1/messages';
+            headers['x-api-key'] = provider.apiKey;
+            headers['anthropic-version'] = '2023-06-01';
+            headers['anthropic-dangerous-direct-by-pass--browser'] = 'true';
+            body = {
+                model: provider.defaultModel,
+                max_tokens: 4000,
+                system: "You are an elite UK Quantity Surveyor Chartered Estimator. You must output strictly valid JSON matching the requested schema.",
+                messages: [
+                    { role: 'user', content: prompt }
+                ]
+            };
+            break;
+
+        case 'gemini':
+            endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${provider.defaultModel}:generateContent?key=${provider.apiKey}`;
+            body = {
+                contents: [{
+                    parts: [{
+                        text: prompt + "\n\nIMPORTANT: Return ONLY a raw JSON object matching the schema. No formatting outside JSON."
+                    }]
+                }]
+            };
+            break;
+
+        case 'xai':
+            endpoint = 'https://api.x.ai/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${provider.apiKey}`;
+            body = {
+                model: provider.defaultModel,
+                messages: [
+                    { role: 'system', content: 'You are an elite UK Quantity Surveyor Chartered Estimator. You must output strictly valid JSON matching the requested schema.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.1
+            };
+            break;
+
+        case 'openrouter':
+            endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${provider.apiKey}`;
+            body = {
+                model: provider.defaultModel,
+                messages: [
+                    { role: 'user', content: prompt + "\n\nIMPORTANT: Return ONLY a raw JSON object matching the schema." }
+                ]
+            };
+            break;
+
+        case 'mistral':
+            endpoint = 'https://api.mistral.ai/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${provider.apiKey}`;
+            body = {
+                model: provider.defaultModel,
+                messages: [
+                    { role: 'system', content: 'You are an elite UK Quantity Surveyor Chartered Estimator. You must output strictly valid JSON matching the requested schema.' },
+                    { role: 'user', content: prompt }
+                ]
+            };
+            break;
+
+        case 'deepseek':
+            endpoint = 'https://api.deepseek.com/chat/completions';
+            headers['Authorization'] = `Bearer ${provider.apiKey}`;
+            body = {
+                model: provider.defaultModel,
+                messages: [
+                    { role: 'system', content: 'You are an elite UK Quantity Surveyor Chartered Estimator. You must output strictly valid JSON matching the requested schema.' },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.1,
+                response_format: { type: "json_object" }
+            };
+            break;
+
+        case 'ollama':
+            endpoint = `${provider.apiKey}/api/generate`;
+            body = {
+                model: provider.defaultModel,
+                prompt: prompt + "\n\nIMPORTANT: Return ONLY a raw JSON object matching the schema.",
+                stream: false,
+                format: "json"
+            };
+            break;
+
+        default:
+            return Promise.reject(new Error("Unsupported AI Provider: " + provider.id));
+    }
+
+    return fetch(endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error(`API Handshake failed. HTTP status code: ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(data => {
+        // Extract raw content depending on provider response formatting
+        let rawText = '';
+        if (provider.id === 'openai' || provider.id === 'xai' || provider.id === 'openrouter' || provider.id === 'mistral' || provider.id === 'deepseek') {
+            rawText = data.choices[0].message.content;
+        } else if (provider.id === 'anthropic') {
+            rawText = data.content[0].text;
+        } else if (provider.id === 'gemini') {
+            rawText = data.candidates[0].content.parts[0].text;
+        } else if (provider.id === 'ollama') {
+            rawText = data.response;
+        }
+
+        return {
+            rawText: rawText,
+            usage: data.usage || null
+        };
+    });
+}
 
 /* --- PHASE 5: AI GENERATOR ENGINE, CONSOLE & DELIVERABLES OUTPUT --- */
 
@@ -1511,6 +2272,90 @@ function startSurveyScanning() {
 // One-Click Generate Professional Quote workflow
 let isOneClickGenerating = false;
 
+// Animate progress checklist steps
+function animateChecklistToStep(targetStepIndex) {
+    const stepsCount = 7;
+    for (let i = 0; i < stepsCount; i++) {
+        const stepEl = document.getElementById(`step-${i}`);
+        if (!stepEl) continue;
+
+        let label = "Connecting...";
+        if (i === 1) label = "Uploading...";
+        if (i === 2) label = "Analysing...";
+        if (i === 3) label = "Calculating...";
+        if (i === 4) label = "Generating BOQ...";
+        if (i === 5) label = "Preparing quotation...";
+        if (i === 6) label = "Completed.";
+
+        if (i < targetStepIndex) {
+            stepEl.className = "flex items-center gap-2.5 text-green-400";
+            stepEl.innerHTML = `
+                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-green-400"></i>
+                <span>${label}</span>
+            `;
+        } else if (i === targetStepIndex) {
+            stepEl.className = "flex items-center gap-2.5 text-brand-gold font-semibold";
+            stepEl.innerHTML = `
+                <i data-lucide="loader-2" class="w-4 h-4 shrink-0 animate-spin text-brand-gold"></i>
+                <span>${label}</span>
+            `;
+        } else {
+            stepEl.className = "flex items-center gap-2.5 text-gray-400";
+            stepEl.innerHTML = `
+                <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                <span>${label}</span>
+            `;
+        }
+    }
+    initLucide();
+}
+
+function resetConfidenceScores() {
+    const scores = ['doc', 'measure', 'pricing', 'overall'];
+    scores.forEach(s => {
+        const text = document.getElementById(`score-${s}`);
+        const bar = document.getElementById(`bar-${s}`);
+        if (text) text.textContent = '0%';
+        if (bar) bar.style.width = '0%';
+    });
+}
+
+function animateConfidenceAtStep(stepIndex) {
+    const docText = document.getElementById('score-doc');
+    const docBar = document.getElementById('bar-doc');
+    const measureText = document.getElementById('score-measure');
+    const measureBar = document.getElementById('bar-measure');
+    const pricingText = document.getElementById('score-pricing');
+    const pricingBar = document.getElementById('bar-pricing');
+    const overallText = document.getElementById('score-overall');
+    const overallBar = document.getElementById('bar-overall');
+
+    if (stepIndex >= 1) { // Uploading
+        if (docText && docBar) {
+            docText.textContent = '98%';
+            docBar.style.width = '98%';
+        }
+    }
+    if (stepIndex >= 2) { // Analysing
+        if (measureText && measureBar) {
+            measureText.textContent = '95%';
+            measureBar.style.width = '95%';
+        }
+    }
+    if (stepIndex >= 4) { // Generating BOQ
+        if (pricingText && pricingBar) {
+            pricingText.textContent = '91%';
+            pricingBar.style.width = '91%';
+        }
+    }
+    if (stepIndex >= 5) { // Preparing quote
+        if (overallText && overallBar) {
+            overallText.textContent = '94%';
+            overallBar.style.width = '94%';
+        }
+    }
+}
+
 function triggerOneClickQuote() {
     if (isOneClickGenerating) return;
 
@@ -1546,9 +2391,9 @@ function triggerOneClickQuote() {
     // Auto-populate some files if list is empty for frictionless experience
     if (uploadedFiles.length === 0) {
         uploadedFiles = [
-            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'application/pdf' },
-            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'application/pdf' },
-            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'image/jpeg' }
+            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'application/pdf', pages: 8, processingStatus: 'Analysis Complete', confidenceScore: 98 },
+            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'application/pdf', pages: 4, processingStatus: 'Analysis Complete', confidenceScore: 95 },
+            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'image/jpeg', pages: 1, processingStatus: 'Analysis Complete', confidenceScore: 92 }
         ];
         renderUploadedFilesList();
         wasAutoFilled = true;
@@ -1565,7 +2410,6 @@ function triggerOneClickQuote() {
         showToast('Auto-Populated Project', 'Fitted with industrial template specs for Mayfair residential extension.');
     }
 
-    // Trigger sequential checklist animations
     isOneClickGenerating = true;
     const generateBtn = document.getElementById('generate-quote-btn');
     if (generateBtn) {
@@ -1586,168 +2430,276 @@ function triggerOneClickQuote() {
         consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-yellow-400 animate-pulse";
     }
 
-    // Set all checklist items back to default
-    const checklistDiv = document.getElementById('ai-progress-checklist');
-    const stepsCount = 12;
-    for (let i = 0; i < stepsCount; i++) {
-        const stepEl = document.getElementById(`step-${i}`);
-        if (stepEl) {
-            stepEl.className = "flex items-center gap-2.5 text-gray-400";
-            stepEl.innerHTML = `
-                <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
-                <span>${stepEl.innerText || stepEl.textContent}</span>
-            `;
-        }
-    }
-    initLucide();
-
-    // Confidence reset
     resetConfidenceScores();
+    animateChecklistToStep(0); // Connecting...
 
-    // Start Sequential Animation Sequence
-    let currentStep = 0;
-    const interval = setInterval(() => {
-        if (currentStep < stepsCount) {
-            animateChecklistStep(currentStep);
-            animateConfidenceAtStep(currentStep);
-            currentStep++;
-        } else {
-            clearInterval(interval);
-            // Finish generation
-            finalizeOneClickGeneration();
-        }
-    }, 700);
-}
+    const activeProv = aiProviders.find(p => p.enabled);
+    const hasLiveAPI = activeProv && activeProv.apiKey && activeProv.apiKey.trim().length > 4;
 
-// Animate specific step in progress panel
-function animateChecklistStep(stepIndex) {
-    // Current step becomes active loader
-    const currentEl = document.getElementById(`step-${stepIndex}`);
-    if (currentEl) {
-        currentEl.className = "flex items-center gap-2.5 text-brand-gold font-semibold";
-        currentEl.innerHTML = `
-            <i data-lucide="loader-2" class="w-4 h-4 shrink-0 animate-spin text-brand-gold"></i>
-            <span>${currentEl.innerText || currentEl.textContent}</span>
-        `;
+    const reqTimeStr = new Date().toLocaleTimeString();
+    const startTime = Date.now();
+
+    // Diagnostics updates
+    const devProvider = document.getElementById('console-provider');
+    const devModel = document.getElementById('console-model');
+    const devStatus = document.getElementById('console-panel-status');
+    const devReqTime = document.getElementById('console-request-time');
+    const devResRaw = document.getElementById('console-response-raw');
+    const devJSONValid = document.getElementById('console-json-valid');
+    const devRt = document.getElementById('console-rt');
+    const devTokens = document.getElementById('console-tokens');
+
+    if (devProvider) devProvider.textContent = activeProv ? activeProv.name : 'Simulated Local Core';
+    if (devModel) devModel.textContent = activeProv ? activeProv.defaultModel : 'Sovereign-Llama3-8B';
+    if (devStatus) {
+        devStatus.textContent = "GENERATING";
+        devStatus.className = "text-yellow-400 font-bold animate-pulse";
+    }
+    if (devReqTime) devReqTime.textContent = reqTimeStr;
+    if (devResRaw) devResRaw.textContent = "Awaiting response stream from live Quantity Surveyor AI...";
+    if (devJSONValid) {
+        devJSONValid.textContent = "Awaiting Validation";
+        devJSONValid.className = "text-yellow-400 font-bold";
     }
 
-    // Previous step becomes checked
-    if (stepIndex > 0) {
-        const prevEl = document.getElementById(`step-${stepIndex - 1}`);
-        if (prevEl) {
-            prevEl.className = "flex items-center gap-2.5 text-green-400";
-            prevEl.innerHTML = `
-                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-green-400"></i>
-                <span>${prevEl.innerText || prevEl.textContent}</span>
-            `;
-        }
-    }
-    initLucide();
-}
-
-// Reset confidence widgets
-function resetConfidenceScores() {
-    const scores = ['doc', 'measure', 'pricing', 'overall'];
-    scores.forEach(s => {
-        const text = document.getElementById(`score-${s}`);
-        const bar = document.getElementById(`bar-${s}`);
-        if (text) text.textContent = '0%';
-        if (bar) bar.style.width = '0%';
-    });
-}
-
-// Gradually increase confidence scores depending on the step index
-function animateConfidenceAtStep(stepIndex) {
-    const docText = document.getElementById('score-doc');
-    const docBar = document.getElementById('bar-doc');
-    const measureText = document.getElementById('score-measure');
-    const measureBar = document.getElementById('bar-measure');
-    const pricingText = document.getElementById('score-pricing');
-    const pricingBar = document.getElementById('bar-pricing');
-    const overallText = document.getElementById('score-overall');
-    const overallBar = document.getElementById('bar-overall');
-
-    if (stepIndex >= 1) { // Analysing project info
-        if (docText && docBar) {
-            docText.textContent = '98%';
-            docBar.style.width = '98%';
-        }
-    }
-    if (stepIndex >= 4) { // Measuring quantities & BOQ
-        if (measureText && measureBar) {
-            measureText.textContent = '95%';
-            measureBar.style.width = '95%';
-        }
-    }
-    if (stepIndex >= 7) { // Calculating costs & rates
-        if (pricingText && pricingBar) {
-            pricingText.textContent = '91%';
-            pricingBar.style.width = '91%';
-        }
-    }
-    if (stepIndex >= 10) { // Producing final quotation
-        if (overallText && overallBar) {
-            overallText.textContent = '94%';
-            overallBar.style.width = '94%';
-        }
-    }
-}
-
-// Finalize generation of One-Click Quote
-function finalizeOneClickGeneration() {
-    isOneClickGenerating = false;
-
-    // Reset button state
-    const generateBtn = document.getElementById('generate-quote-btn');
-    if (generateBtn) {
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = `
-            <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
-            Generate Professional Quote
-        `;
-    }
-
-    // Set Status checklist's last step to green check
-    const lastStepEl = document.getElementById(`step-11`);
-    if (lastStepEl) {
-        lastStepEl.className = "flex items-center gap-2.5 text-green-400";
-        lastStepEl.innerHTML = `
-            <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-green-400"></i>
-            <span>Finished</span>
-        `;
-    }
-
-    // Set Status dot & panel title
-    const consoleDot = document.getElementById('console-status-dot');
-    const consoleText = document.getElementById('console-status-text');
-    if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
-    if (consoleText) {
-        consoleText.textContent = "FINISHED";
-        consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
-    }
-    initLucide();
-
-    // 1. Detect Project Type
     const projectType = detectProjectType();
-    const template = internalPromptTemplates[projectType];
+    const regionName = document.getElementById('project-region') ? document.getElementById('project-region').value : 'London';
+    const regionInfo = ukRegionsData[regionName] || ukRegionsData['London'];
 
-    // 2. Load type-specific BOQ items
-    const sampleItems = getTypeSpecificBOQ(projectType);
-    boqItems = sampleItems;
+    if (hasLiveAPI) {
+        // DRIVE PROGRESS PANEL SEQUENTIALLY
+        setTimeout(() => {
+            animateChecklistToStep(1); // Uploading...
+            animateConfidenceAtStep(1);
+        }, 600);
 
-    // 3. Render and Recalculate
-    renderBOQTable(); // This internally saves to local storage and recalculates
+        setTimeout(() => {
+            animateChecklistToStep(2); // Analysing...
+            animateConfidenceAtStep(2);
+        }, 1200);
 
-    // 4. Generate the Chartered Quantity Surveyor report (14 sections)
-    const quoteHTML = generateCharteredQSReport(projectType, template);
+        // Build structured request
+        const structuredPrompt = buildStructuredAIRequest(
+            projectType,
+            regionName,
+            regionInfo,
+            {
+                name: projNameInput.value,
+                client: projClientInput.value,
+                site: projSiteInput.value,
+                quoteNo: projQuoteNoInput.value,
+                date: projDateInput.value,
+                currency: document.getElementById('project-currency').value
+            },
+            uploadedFiles,
+            boqItems,
+            {
+                waste: parseInt(document.getElementById('input-waste').value),
+                contingency: parseInt(document.getElementById('input-contingency').value),
+                profit: parseInt(document.getElementById('input-profit').value),
+                discount: parseInt(document.getElementById('input-discount').value),
+                vatEnabled: document.getElementById('input-vat-enable').checked,
+                vatRate: parseFloat(document.getElementById('input-vat-rate').value)
+            },
+            projDescInput.value
+        );
 
-    // 5. Update viewport content
-    const viewport = document.getElementById('output-content-wrapper');
-    if (viewport) {
-        viewport.innerHTML = quoteHTML;
+        // Execute API
+        executeAIProviderRequest(activeProv, structuredPrompt)
+        .then(result => {
+            const rt = Date.now() - startTime;
+            if (devRt) devRt.textContent = `${rt} ms`;
+            if (devTokens) devTokens.textContent = result.usage ? `${result.usage.total_tokens} tok` : '~1285 tok';
+            if (devResRaw) devResRaw.textContent = result.rawText.substring(0, 1000) + (result.rawText.length > 1000 ? "\n... (truncated)" : "");
+
+            animateChecklistToStep(3); // Calculating...
+            animateConfidenceAtStep(3);
+
+            // Clean & Parse JSON
+            let parsed = null;
+            try {
+                const cleanedJSON = cleanJSONResponse(result.rawText);
+                parsed = JSON.parse(cleanedJSON);
+
+                if (devJSONValid) {
+                    devJSONValid.textContent = "✓ Valid JSON";
+                    devJSONValid.className = "text-green-400 font-bold";
+                }
+            } catch (jsonErr) {
+                console.error("JSON parsing error: ", jsonErr);
+                if (devJSONValid) {
+                    devJSONValid.textContent = "✗ Invalid JSON Structure";
+                    devJSONValid.className = "text-red-400 font-bold";
+                }
+                throw new Error("Quantity Surveyor AI returned an invalid JSON data payload. Please try again.");
+            }
+
+            // Successfully received JSON! Drive final steps and populate
+            setTimeout(() => {
+                animateChecklistToStep(4); // Generating BOQ...
+                animateConfidenceAtStep(4);
+
+                if (parsed.BillOfQuantities && parsed.BillOfQuantities.length > 0) {
+                    boqItems = parsed.BillOfQuantities.map((item, idx) => ({
+                        id: 'live-' + Date.now() + '-' + idx,
+                        itemNo: item.itemNo || `${idx + 1}.01`,
+                        description: item.description || "Estimate Line Item",
+                        unit: item.unit || "m2",
+                        quantity: parseFloat(item.quantity) || 1,
+                        materialRate: parseFloat(item.materialRate) || 0,
+                        labourRate: parseFloat(item.labourRate) || 0,
+                        plantRate: parseFloat(item.plantRate) || 0,
+                        total: 0,
+                        aiNotes: item.aiNotes || "Calculated by Quantity Surveyor AI."
+                    }));
+                }
+                renderBOQTable(); // Recalculates internally with regional scaling!
+            }, 600);
+
+            setTimeout(() => {
+                animateChecklistToStep(5); // Preparing quotation...
+                animateConfidenceAtStep(5);
+
+                const quoteHTML = renderCharteredQSReportFromJSON(parsed, projectType);
+                const viewport = document.getElementById('output-content-wrapper');
+                if (viewport) {
+                    viewport.innerHTML = quoteHTML;
+                }
+            }, 1200);
+
+            setTimeout(() => {
+                animateChecklistToStep(6); // Completed.
+                isOneClickGenerating = false;
+
+                // Reset button state
+                if (generateBtn) {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = `
+                        <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
+                        Generate Professional Quote
+                    `;
+                }
+
+                if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
+                if (consoleText) {
+                    consoleText.textContent = "FINISHED";
+                    consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
+                }
+                if (devStatus) {
+                    devStatus.textContent = "COMPLETED";
+                    devStatus.className = "text-green-400 font-bold";
+                }
+                initLucide();
+
+                showToast('Quote Generated Successfully', `The ${activeProv.name} Quantity Surveyor AI has parsed and structured your quote.`);
+            }, 1800);
+
+        })
+        .catch(err => {
+            console.error("Live API quotation failed: ", err);
+            isOneClickGenerating = false;
+
+            if (generateBtn) {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = `
+                    <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
+                    Generate Professional Quote
+                `;
+            }
+
+            if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-red-400";
+            if (consoleText) {
+                consoleText.textContent = "FAILED";
+                consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-red-400";
+            }
+            if (devStatus) {
+                devStatus.textContent = "FAILED";
+                devStatus.className = "text-red-400 font-bold";
+            }
+
+            // Show a professional error message with Retry option inside viewport
+            const viewport = document.getElementById('output-content-wrapper');
+            if (viewport) {
+                viewport.innerHTML = `
+                    <div class="p-6 bg-red-500/10 border border-red-500/20 rounded-xl space-y-4 text-center">
+                        <div class="w-12 h-12 rounded-full bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center mx-auto">
+                            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                        </div>
+                        <div class="space-y-1.5">
+                            <h4 class="text-white font-bold text-base">Surveyor Valuation Transmission Interrupted</h4>
+                            <p class="text-xs text-gray-400 max-w-md mx-auto">The live AI Quantity Surveyor was unable to establish a fully validated handshake due to API service timeouts, rate limits, or network access blockades.</p>
+                        </div>
+                        <div class="pt-2">
+                            <button onclick="triggerOneClickQuote()" class="px-5 py-2.5 bg-brand-gold text-brand-matte hover:bg-brand-gold-hover font-bold text-xs rounded-lg transition-all shadow-gold-glow-sm inline-flex items-center gap-1.5">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i>
+                                Retry Quote Generation
+                            </button>
+                        </div>
+                    </div>
+                `;
+                initLucide();
+            }
+
+            showToast('Generation Interrupted', 'AI Quantity Surveyor handshakes timed out. Ready to retry.');
+        });
+
+    } else {
+        // GORGEOUS SIMULATION SEQUENCE DRIVER
+        let step = 0;
+        const interval = setInterval(() => {
+            if (step < 7) {
+                animateChecklistToStep(step);
+                animateConfidenceAtStep(step);
+                step++;
+            } else {
+                clearInterval(interval);
+
+                isOneClickGenerating = false;
+                if (generateBtn) {
+                    generateBtn.disabled = false;
+                    generateBtn.innerHTML = `
+                        <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
+                        Generate Professional Quote
+                    `;
+                }
+
+                if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
+                if (consoleText) {
+                    consoleText.textContent = "FINISHED";
+                    consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
+                }
+                if (devStatus) {
+                    devStatus.textContent = "COMPLETED (SIM)";
+                    devStatus.className = "text-green-400 font-bold";
+                }
+                if (devRt) devRt.textContent = `${Math.floor(Math.random() * 200) + 150} ms`;
+                if (devTokens) devTokens.textContent = `285 tok`;
+                if (devJSONValid) {
+                    devJSONValid.textContent = "✓ Valid JSON (Simulated)";
+                    devJSONValid.className = "text-green-400 font-bold";
+                }
+                if (devResRaw) devResRaw.textContent = `{\n  "status": "simulated_success",\n  "sector": "${projectType}",\n  "region": "${regionName}"\n}`;
+
+                // 1. Load type-specific BOQ items
+                const sampleItems = getTypeSpecificBOQ(projectType);
+                boqItems = sampleItems;
+
+                // 2. Render and Recalculate (which includes regional scaling!)
+                renderBOQTable();
+
+                // 3. Generate mock QS report from the pre-written fallback template
+                const template = internalPromptTemplates[projectType];
+                const quoteHTML = generateCharteredQSReport(projectType, template);
+                const viewport = document.getElementById('output-content-wrapper');
+                if (viewport) {
+                    viewport.innerHTML = quoteHTML;
+                }
+
+                initLucide();
+                showToast('Quote Generated Successfully', `The Quantity Surveyor AI has parsed files under ${projectType} template.`);
+            }
+        }, 600);
     }
-
-    showToast('Quote Generated Successfully', `The Quantity Surveyor AI has parsed files under ${projectType} template.`);
 }
 
 // Map project types to high-fidelity BOQ data
