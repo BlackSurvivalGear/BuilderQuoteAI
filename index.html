@@ -209,38 +209,42 @@
                     <div class="lg:col-span-7 bg-brand-graphite border border-brand-glass-border rounded-xl p-6 space-y-4">
                         <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-brand-glass-border pb-3">
                             <i data-lucide="file-text" class="w-5 h-5 text-brand-gold"></i>
-                            Document & Prompt Inputs
+                            Project Documents
                         </h2>
                         <div class="space-y-4">
-                            <!-- Drag & Drop PDF, Word, Excel Upload Simulator -->
+                            <!-- Drag & Drop Multiple Documents Upload Simulator -->
                             <div id="workspace-upload-zone" class="border border-dashed border-brand-gold/30 hover:border-brand-gold rounded-xl p-5 text-center cursor-pointer transition-all duration-300 bg-brand-matte/40 group relative overflow-hidden" onclick="simulateFileUpload()">
-                                <input type="file" id="workspace-file-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" onchange="handleWorkspaceFile(event)">
+                                <input type="file" id="workspace-file-input" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg" multiple onchange="handleWorkspaceFiles(event)">
                                 <div class="space-y-2">
                                     <div class="mx-auto w-10 h-10 rounded-lg bg-brand-gold-muted border border-brand-gold-border flex items-center justify-center text-brand-gold group-hover:scale-110 transition-transform duration-300">
                                         <i data-lucide="cloud-upload" class="w-5 h-5"></i>
                                     </div>
                                     <div>
-                                        <p class="text-xs font-semibold">Upload Blueprint PDF, Word Doc or Excel BOQ</p>
-                                        <p class="text-[10px] text-gray-400 mt-0.5">Supports architectural specs, schedules or raw pricing sheets</p>
-                                    </div>
-                                    <div id="uploaded-file-badge" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-mono">
-                                        <i data-lucide="file" class="w-3.5 h-3.5"></i>
-                                        <span id="uploaded-file-name">spec_doc.pdf</span>
-                                        <button onclick="clearUploadedFile(event)" class="text-gray-400 hover:text-white ml-1">
-                                            <i data-lucide="x" class="w-3 h-3"></i>
-                                        </button>
+                                        <p class="text-xs font-semibold">Upload Project Documents</p>
+                                        <p class="text-[10px] text-gray-400 mt-0.5">Supports PDF Drawings, Architectural/Structural/M&E specs, BOQs, Word, Excel, and Site Photos</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Paste Area for Prompt/Project Specification -->
+                            <!-- Uploaded files list -->
+                            <div id="uploaded-files-list" class="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                                <!-- JS Dynamic Injection -->
+                            </div>
+
+                            <!-- Paste Area for Project Description -->
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center">
-                                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Project Specification / Custom Prompt</label>
-                                    <button onclick="loadSampleProjectPrompt()" class="text-[10px] text-brand-gold hover:underline">Load Sample Spec</button>
+                                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Project Description / Additional Information</label>
+                                    <button onclick="loadSampleProjectDescription()" class="text-[10px] text-brand-gold hover:underline">Load Sample Project Description</button>
                                 </div>
-                                <textarea id="workspace-project-description" rows="5" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors resize-none font-sans leading-relaxed" placeholder="Paste architectural description, room schedules, tender notes or custom instructions for the AI Quantity Surveyor here..."></textarea>
+                                <textarea id="workspace-project-description" rows="5" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors resize-none font-sans leading-relaxed" placeholder="Describe the project details, scope of works, finishes, structural elements, heights, or any other relevant details. BuilderQuoteAI will automatically analyze this alongside your uploaded documents to build the complete quote."></textarea>
                             </div>
+
+                            <!-- One-Click Premium Gold Generate Button -->
+                            <button id="generate-quote-btn" onclick="triggerOneClickQuote()" class="w-full py-4 px-6 rounded-xl bg-brand-gold text-brand-matte hover:bg-brand-gold-hover hover:shadow-gold-glow font-extrabold text-base tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 mt-4">
+                                <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
+                                Generate Professional Quote
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -495,45 +499,125 @@
 
                 <!-- Live AI Terminal / Console Panel & Generated Contract Output -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-                    <!-- AI Console Logs (Left 5 Cols) -->
-                    <div class="lg:col-span-5 bg-[#0C0C0F] border border-brand-glass-border rounded-xl p-5 flex flex-col justify-between space-y-4 font-mono relative">
-                        <div class="absolute top-4 right-4 flex items-center gap-1">
-                            <span id="console-status-dot" class="w-2 h-2 rounded-full bg-green-400"></span>
-                            <span id="console-status-text" class="text-[9px] uppercase text-green-400">IDLE</span>
+                    <!-- AI Status Panel (Left 5 Cols) -->
+                    <div class="lg:col-span-5 bg-brand-graphite border border-brand-glass-border rounded-xl p-5 flex flex-col justify-between space-y-4 relative">
+                        <div class="absolute top-4 right-4 flex items-center gap-1.5">
+                            <span id="console-status-dot" class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+                            <span id="console-status-text" class="text-[10px] font-bold uppercase tracking-wider text-green-400">IDLE</span>
                         </div>
-                        <div>
-                            <h3 class="text-xs font-bold text-brand-gold flex items-center gap-1.5 border-b border-brand-glass-border/40 pb-3 mb-3">
-                                <i data-lucide="terminal" class="w-4 h-4"></i>
-                                Sovereign AI Console
+                        <div class="space-y-4">
+                            <h3 class="text-sm font-bold text-brand-gold flex items-center gap-2 border-b border-brand-glass-border/40 pb-3">
+                                <i data-lucide="activity" class="w-4 h-4 text-brand-gold"></i>
+                                AI Takeoff & Progress Panel
                             </h3>
-                            <div class="space-y-3 text-[11px] leading-relaxed max-h-[350px] overflow-y-auto pr-2">
-                                <div>
-                                    <span class="text-gray-500">PROVIDER:</span>
-                                    <span id="console-provider" class="text-white font-bold">Simulated Local Core</span>
+
+                            <!-- Animated Checklist -->
+                            <div id="ai-progress-checklist" class="space-y-3 text-xs">
+                                <div id="step-0" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Reading uploaded documents</span>
                                 </div>
-                                <div>
-                                    <span class="text-gray-500">MODEL:</span>
-                                    <span id="console-model" class="text-brand-gold">Sovereign-Llama3-8B</span>
+                                <div id="step-1" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Analysing project information</span>
                                 </div>
-                                <div>
-                                    <span class="text-gray-500">PROMPT SENT:</span>
-                                    <pre id="console-prompt-sent" class="bg-brand-matte/80 border border-brand-glass-border/40 rounded p-2 text-gray-400 whitespace-pre-wrap select-all max-h-[100px] overflow-y-auto">No prompt sent yet.</pre>
+                                <div id="step-2" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Detecting trade packages</span>
                                 </div>
-                                <div>
-                                    <span class="text-gray-500">AI RESPONSE LOGS:</span>
-                                    <pre id="console-response-raw" class="bg-brand-matte/80 border border-brand-glass-border/40 rounded p-2 text-gray-400 whitespace-pre-wrap max-h-[120px] overflow-y-auto">Awaiting generative trigger...</pre>
+                                <div id="step-3" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Measuring quantities</span>
+                                </div>
+                                <div id="step-4" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Generating Bill of Quantities</span>
+                                </div>
+                                <div id="step-5" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Calculating material costs</span>
+                                </div>
+                                <div id="step-6" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Calculating labour costs</span>
+                                </div>
+                                <div id="step-7" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Calculating plant costs</span>
+                                </div>
+                                <div id="step-8" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Applying profit margins</span>
+                                </div>
+                                <div id="step-9" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Applying VAT</span>
+                                </div>
+                                <div id="step-10" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Producing quotation</span>
+                                </div>
+                                <div id="step-11" class="flex items-center gap-2.5 text-gray-400">
+                                    <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                                    <span>Finished</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="border-t border-brand-glass-border/40 pt-3 flex justify-between items-center text-[10px] text-gray-500">
-                            <div>
-                                <span>Response Time:</span>
-                                <span id="console-rt" class="text-brand-gold font-bold">-- ms</span>
+
+                        <!-- Confidence Score Widget -->
+                        <div class="border-t border-brand-glass-border/40 pt-4 space-y-3">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-brand-gold"></i>
+                                AI Estimation Confidence
+                            </h4>
+                            <div class="grid grid-cols-2 gap-3 text-[10px] font-semibold">
+                                <div class="bg-brand-matte/40 border border-brand-glass-border/55 p-2.5 rounded-lg">
+                                    <div class="flex justify-between text-gray-400 mb-1">
+                                        <span>Document Understanding</span>
+                                        <span id="score-doc" class="text-brand-gold font-bold">0%</span>
+                                    </div>
+                                    <div class="w-full h-1 bg-brand-matte rounded-full overflow-hidden">
+                                        <div id="bar-doc" class="h-full bg-brand-gold transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-brand-matte/40 border border-brand-glass-border/55 p-2.5 rounded-lg">
+                                    <div class="flex justify-between text-gray-400 mb-1">
+                                        <span>Measurement Confidence</span>
+                                        <span id="score-measure" class="text-brand-gold font-bold">0%</span>
+                                    </div>
+                                    <div class="w-full h-1 bg-brand-matte rounded-full overflow-hidden">
+                                        <div id="bar-measure" class="h-full bg-brand-gold transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-brand-matte/40 border border-brand-glass-border/55 p-2.5 rounded-lg">
+                                    <div class="flex justify-between text-gray-400 mb-1">
+                                        <span>Pricing Confidence</span>
+                                        <span id="score-pricing" class="text-brand-gold font-bold">0%</span>
+                                    </div>
+                                    <div class="w-full h-1 bg-brand-matte rounded-full overflow-hidden">
+                                        <div id="bar-pricing" class="h-full bg-brand-gold transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-brand-matte/40 border border-brand-glass-border/55 p-2.5 rounded-lg">
+                                    <div class="flex justify-between text-gray-400 mb-1">
+                                        <span>Overall Estimate Confidence</span>
+                                        <span id="score-overall" class="text-brand-gold font-bold">0%</span>
+                                    </div>
+                                    <div class="w-full h-1 bg-brand-matte rounded-full overflow-hidden">
+                                        <div id="bar-overall" class="h-full bg-brand-gold transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <span>Tokens Usage:</span>
-                                <span id="console-tokens" class="text-green-400 font-bold">-- tok</span>
-                            </div>
+                        </div>
+
+                        <!-- Provider Info & Token details (Hidden elements kept to avoid JS crashes) -->
+                        <div class="hidden">
+                            <span id="console-provider">Simulated Local Core</span>
+                            <span id="console-model">Sovereign-Llama3-8B</span>
+                            <pre id="console-prompt-sent">No prompt sent yet.</pre>
+                            <pre id="console-response-raw">Awaiting generative trigger...</pre>
+                            <span id="console-rt">-- ms</span>
+                            <span id="console-tokens">-- tok</span>
                         </div>
                     </div>
 
