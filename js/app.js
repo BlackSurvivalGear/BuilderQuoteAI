@@ -241,6 +241,12 @@ function initWorkspaceData() {
                 document.getElementById('workspace-project-description').value = data.projectDescription;
             }
 
+            // Restore uploaded files
+            if (data.uploadedFiles) {
+                uploadedFiles = data.uploadedFiles;
+                renderUploadedFilesList();
+            }
+
         } catch (e) {
             console.error('Failed to parse local storage data:', e);
             loadSampleBOQData();
@@ -276,7 +282,8 @@ function saveWorkspaceToLocalStorage() {
         projectInfo,
         sliders,
         boqItems,
-        projectDescription
+        projectDescription,
+        uploadedFiles
     };
 
     localStorage.setItem('builder_quote_data', JSON.stringify(dataPayload));
@@ -758,7 +765,30 @@ function testProviderConnection(id) {
 }
 
 
-/* --- PHASE 4: DOCUMENT INPUTS & PROMPTING --- */
+/* --- PHASE 4: MULTI-DOCUMENT INPUTS & PROMPTING --- */
+
+// State for keeping uploaded file items
+let uploadedFiles = [];
+
+// Helper to format file size
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Get icon name based on file extension/type
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['pdf'].includes(ext)) return 'file-text';
+    if (['doc', 'docx'].includes(ext)) return 'file-text';
+    if (['xls', 'xlsx'].includes(ext)) return 'file-spreadsheet';
+    if (['png', 'jpg', 'jpeg'].includes(ext)) return 'image';
+    return 'file';
+}
 
 // Simulated file loading upload block trigger
 function simulateFileUpload() {
@@ -768,49 +798,184 @@ function simulateFileUpload() {
     }
 }
 
-function handleWorkspaceFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+// Handle multiple files selection
+function handleWorkspaceFiles(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    // Show badge
-    const badge = document.getElementById('uploaded-file-badge');
-    const nameEl = document.getElementById('uploaded-file-name');
-    if (badge && nameEl) {
-        nameEl.textContent = file.name;
-        badge.classList.remove('hidden');
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Skip duplicate files by name
+        if (uploadedFiles.some(f => f.name === file.name)) continue;
+
+        uploadedFiles.push({
+            id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+            name: file.name,
+            size: file.size,
+            formattedSize: formatBytes(file.size),
+            type: file.type
+        });
     }
 
-    showToast('File Processed', `Loaded blueprint document: ${file.name}. Pre-parsing structure...`);
-
-    // Auto populate sample description to speed up workflow!
-    const promptArea = document.getElementById('workspace-project-description');
-    if (promptArea && promptArea.value.trim().length === 0) {
-        promptArea.value = `Analysis request for architectural specification sheet "${file.name}":\n\n- Estimate brick and structural concrete weights.\n- Add plumbing and partition requirements to the BOQ.\n- Audit total floor pricing overheads.`;
-    }
-
+    showToast('Files Processed', `Loaded ${files.length} project document(s). Pre-parsing structures...`);
+    renderUploadedFilesList();
     saveWorkspaceToLocalStorage();
 }
 
-function clearUploadedFile(event) {
-    event.stopPropagation();
-    const fileInput = document.getElementById('workspace-file-input');
-    if (fileInput) fileInput.value = '';
+// Render the list of uploaded files
+function renderUploadedFilesList() {
+    const container = document.getElementById('uploaded-files-list');
+    if (!container) return;
 
-    const badge = document.getElementById('uploaded-file-badge');
-    if (badge) badge.classList.add('hidden');
+    if (uploadedFiles.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
 
-    showToast('File Removed', 'Blueprint unlinked.');
+    container.innerHTML = '';
+    uploadedFiles.forEach(file => {
+        const iconName = getFileIcon(file.name);
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between bg-brand-matte/60 border border-brand-glass-border/40 rounded-lg p-2.5 text-xs transition-all hover:border-brand-gold/30";
+        div.innerHTML = `
+            <div class="flex items-center gap-2.5 truncate max-w-[70%]">
+                <i data-lucide="${iconName}" class="w-4 h-4 text-brand-gold shrink-0"></i>
+                <div class="truncate">
+                    <p class="font-semibold text-white truncate" title="${file.name}">${file.name}</p>
+                    <p class="text-[10px] text-gray-500">${file.formattedSize}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button onclick="replaceUploadedFile('${file.id}')" class="px-2 py-1 bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-[10px] rounded hover:bg-brand-gold hover:text-brand-matte font-bold transition-all flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                    Replace
+                </button>
+                <button onclick="removeUploadedFile('${file.id}')" class="p-1 rounded bg-transparent text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    initLucide();
+}
+
+// Remove an uploaded file
+function removeUploadedFile(id) {
+    uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+    renderUploadedFilesList();
+    showToast('File Removed', 'Document unlinked.');
     saveWorkspaceToLocalStorage();
 }
 
-// Load professional pre-written architectural prompt
-function loadSampleProjectPrompt() {
+// Replace an uploaded file
+let fileToReplaceId = null;
+function replaceUploadedFile(id) {
+    fileToReplaceId = id;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const index = uploadedFiles.findIndex(f => f.id === fileToReplaceId);
+        if (index !== -1) {
+            uploadedFiles[index] = {
+                id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+                name: file.name,
+                size: file.size,
+                formattedSize: formatBytes(file.size),
+                type: file.type
+            };
+            showToast('File Replaced', `Successfully replaced with ${file.name}`);
+            renderUploadedFilesList();
+            saveWorkspaceToLocalStorage();
+        }
+        fileToReplaceId = null;
+    };
+    input.click();
+}
+
+// Load professional pre-written architectural prompt/description
+function loadSampleProjectDescription() {
     const desc = document.getElementById('workspace-project-description');
     if (desc) {
         desc.value = `Tender specifications for Mayfair duplex residential refurb:\n- Ground Floor: Demolition of internal structural masonry partitions, supply and installation of steel structural beams (203x203x46 UC).\n- First Floor: Install structural stud partition walls, skim coat plaster, double insulated plasterboards.\n- Electrical sub-circuits: 12 LED downlights, 6 double sockets, regional utility certificate audit.\n- Flooring: Underfloor insulation, dry screed flooring base, engineered premium Oak timber floorboards throughout.`;
         saveWorkspaceToLocalStorage();
         showToast('Sample Loaded', 'Architectural tender spec injected into workspace.');
     }
+}
+
+/* Internal Prompt Templates & Classification Logic */
+const internalPromptTemplates = {
+    Residential: {
+        type: 'Residential',
+        desc: 'Precision Estimating template for single-family homes, townhouses, and residential estates. Emphasizes fine brickwork, carpentry, plastering, premium flooring, and high-end residential fixtures.',
+        systemPrompt: 'You are an elite residential Quantity Surveyor. Analyze architectural drawings and structural layouts for premium residential projects. Quantify materials (bricks, tiles, timber), labour craft-hours, and residential standards compliance.'
+    },
+    Commercial: {
+        type: 'Commercial',
+        desc: 'Estimation template tailored for offices, retail bays, and multi-tenant commercial structures. Focuses on structural steel frameworks, curtain-wall glazing, commercial HVAC, standard electrical sub-grids, and acoustics.',
+        systemPrompt: 'You are a senior commercial Chartered Quantity Surveyor. Focus on retail, offices, and commercial workspaces. Analyze architectural glazing, HVAC specs, fireproofing, suspended ceilings, and commercial wiring.'
+    },
+    Industrial: {
+        type: 'Industrial',
+        desc: 'Advanced template optimized for warehouses, plants, and manufacturing hubs. Prioritizes reinforced concrete slabs, portal frame steelworks, heavy plant machinery, high-voltage grids, and industrial exhaust ducts.',
+        systemPrompt: 'You are a specialist industrial Estimator. Analyze heavy industrial plant layouts, massive warehouses, reinforced concrete slab details, metal cladding, portal framing, and high-power substation grids.'
+    },
+    CivilEngineering: {
+        type: 'Civil Engineering',
+        desc: 'Optimized for high-volume earthworks, foundations, highway structures, retaining walls, drainage grids, concrete culverts, and structural grading.',
+        systemPrompt: 'You are a chartered Civil Engineering Quantity Surveyor. Specialize in bulk excavation, cut-and-fill balances, underground utilities, drainage pipelines, retaining walls, and sub-base grading.'
+    },
+    Renovation: {
+        type: 'Renovation',
+        desc: 'Template designed specifically for remodeling, historic preservation, stripping down partition walls, retrofitting structural steels, and interior skim finishes.',
+        systemPrompt: 'You are a senior Renovation & Refurbishment Estimator. Focus on strip-out schedules, load-bearing partition demolitions, structural steel additions (RSJs), historic masonry repairs, and plaster skimming.'
+    },
+    Extension: {
+        type: 'Extension',
+        desc: 'A specialized template for property extensions, matching existing brickwork/roof pitch, adding foundational concrete trenches, structural tie-ins, and connecting utility sub-circuits.',
+        systemPrompt: 'You are an expert Property Extension Surveyor. Focus on matching structural ties, excavation trenches adjoining existing footings, cavity wall extensions, matching roof slates, and tying in heating loops.'
+    },
+    Infrastructure: {
+        type: 'Infrastructure',
+        desc: 'Comprehensive template for municipal infrastructure, deep sewer mains, telecom ducting, concrete highways, public illumination grids, and storm-water management structures.',
+        systemPrompt: 'You are an Infrastructure Project Cost Analyst. Analyze civil highway specs, high-volume asphaltic paving, municipal water distribution mains, street lighting loops, and structural masonry culverts.'
+    }
+};
+
+// Automatical project type detection based on keywords
+function detectProjectType() {
+    const name = (document.getElementById('project-name').value || '').toLowerCase();
+    const desc = (document.getElementById('workspace-project-description').value || '').toLowerCase();
+    const filenames = uploadedFiles.map(f => f.name.toLowerCase()).join(' ');
+
+    const textToAnalyze = `${name} ${desc} ${filenames}`;
+
+    if (textToAnalyze.includes('warehouse') || textToAnalyze.includes('industrial') || textToAnalyze.includes('plant') || textToAnalyze.includes('factory')) {
+        return 'Industrial';
+    }
+    if (textToAnalyze.includes('commercial') || textToAnalyze.includes('office') || textToAnalyze.includes('retail') || textToAnalyze.includes('shop') || textToAnalyze.includes('showroom')) {
+        return 'Commercial';
+    }
+    if (textToAnalyze.includes('civil') || textToAnalyze.includes('earthwork') || textToAnalyze.includes('retaining') || textToAnalyze.includes('foundation') || textToAnalyze.includes('concrete pour')) {
+        return 'CivilEngineering';
+    }
+    if (textToAnalyze.includes('renovation') || textToAnalyze.includes('refurb') || textToAnalyze.includes('remodel') || textToAnalyze.includes('restoration') || textToAnalyze.includes('stripout')) {
+        return 'Renovation';
+    }
+    if (textToAnalyze.includes('extension') || textToAnalyze.includes('extend') || textToAnalyze.includes('annex') || textToAnalyze.includes('loft')) {
+        return 'Extension';
+    }
+    if (textToAnalyze.includes('infrastructure') || textToAnalyze.includes('highway') || textToAnalyze.includes('sewer') || textToAnalyze.includes('road') || textToAnalyze.includes('pipe')) {
+        return 'Infrastructure';
+    }
+
+    // Default to Residential
+    return 'Residential';
 }
 
 
@@ -1341,6 +1506,642 @@ function startSurveyScanning() {
             showToast('Sovereign Estimator', 'Architectural blueprint parsed. Takeoffs loaded!');
         }
     }, 1200);
+}
+
+// One-Click Generate Professional Quote workflow
+let isOneClickGenerating = false;
+
+function triggerOneClickQuote() {
+    if (isOneClickGenerating) return;
+
+    // Check if Project Information is fully complete, if not, auto-fill it beautifully!
+    const projNameInput = document.getElementById('project-name');
+    const projClientInput = document.getElementById('project-client');
+    const projSiteInput = document.getElementById('project-site');
+    const projQuoteNoInput = document.getElementById('project-quote-no');
+    const projDateInput = document.getElementById('project-date');
+
+    let wasAutoFilled = false;
+    if (!projNameInput.value) {
+        projNameInput.value = 'Mayfair Premium Residential Refurb';
+        wasAutoFilled = true;
+    }
+    if (!projClientInput.value) {
+        projClientInput.value = 'Mr. & Mrs. Henderson';
+        wasAutoFilled = true;
+    }
+    if (!projSiteInput.value) {
+        projSiteInput.value = '12 Mayfair Gardens, London, W1J 8AJ';
+        wasAutoFilled = true;
+    }
+    if (!projQuoteNoInput.value) {
+        projQuoteNoInput.value = 'BQ-2024-' + Math.floor(100 + Math.random() * 900);
+        wasAutoFilled = true;
+    }
+    if (!projDateInput.value) {
+        projDateInput.value = new Date().toISOString().substring(0, 10);
+        wasAutoFilled = true;
+    }
+
+    // Auto-populate some files if list is empty for frictionless experience
+    if (uploadedFiles.length === 0) {
+        uploadedFiles = [
+            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'application/pdf' },
+            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'application/pdf' },
+            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'image/jpeg' }
+        ];
+        renderUploadedFilesList();
+        wasAutoFilled = true;
+    }
+
+    // Auto-populate Project Description if empty
+    const projDescInput = document.getElementById('workspace-project-description');
+    if (!projDescInput.value) {
+        projDescInput.value = 'Comprehensive high-spec refurbishment of a double-fronted residential house in Mayfair. Requires structural masonry partition removal, steel installation, first floor stud partitions, plastering, full electrical rewire, underfloor heating loops, and natural Welch slate roofing with breathable membrane. Premium oak floor finishes required throughout.';
+        wasAutoFilled = true;
+    }
+
+    if (wasAutoFilled) {
+        showToast('Auto-Populated Project', 'Fitted with industrial template specs for Mayfair residential extension.');
+    }
+
+    // Trigger sequential checklist animations
+    isOneClickGenerating = true;
+    const generateBtn = document.getElementById('generate-quote-btn');
+    if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = `
+            <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+            Generating Professional Quote...
+        `;
+        initLucide();
+    }
+
+    // Set Status dot & panel title
+    const consoleDot = document.getElementById('console-status-dot');
+    const consoleText = document.getElementById('console-status-text');
+    if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-400";
+    if (consoleText) {
+        consoleText.textContent = "GENERATING";
+        consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-yellow-400 animate-pulse";
+    }
+
+    // Set all checklist items back to default
+    const checklistDiv = document.getElementById('ai-progress-checklist');
+    const stepsCount = 12;
+    for (let i = 0; i < stepsCount; i++) {
+        const stepEl = document.getElementById(`step-${i}`);
+        if (stepEl) {
+            stepEl.className = "flex items-center gap-2.5 text-gray-400";
+            stepEl.innerHTML = `
+                <i data-lucide="circle" class="w-4 h-4 shrink-0 text-gray-500"></i>
+                <span>${stepEl.innerText || stepEl.textContent}</span>
+            `;
+        }
+    }
+    initLucide();
+
+    // Confidence reset
+    resetConfidenceScores();
+
+    // Start Sequential Animation Sequence
+    let currentStep = 0;
+    const interval = setInterval(() => {
+        if (currentStep < stepsCount) {
+            animateChecklistStep(currentStep);
+            animateConfidenceAtStep(currentStep);
+            currentStep++;
+        } else {
+            clearInterval(interval);
+            // Finish generation
+            finalizeOneClickGeneration();
+        }
+    }, 700);
+}
+
+// Animate specific step in progress panel
+function animateChecklistStep(stepIndex) {
+    // Current step becomes active loader
+    const currentEl = document.getElementById(`step-${stepIndex}`);
+    if (currentEl) {
+        currentEl.className = "flex items-center gap-2.5 text-brand-gold font-semibold";
+        currentEl.innerHTML = `
+            <i data-lucide="loader-2" class="w-4 h-4 shrink-0 animate-spin text-brand-gold"></i>
+            <span>${currentEl.innerText || currentEl.textContent}</span>
+        `;
+    }
+
+    // Previous step becomes checked
+    if (stepIndex > 0) {
+        const prevEl = document.getElementById(`step-${stepIndex - 1}`);
+        if (prevEl) {
+            prevEl.className = "flex items-center gap-2.5 text-green-400";
+            prevEl.innerHTML = `
+                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-green-400"></i>
+                <span>${prevEl.innerText || prevEl.textContent}</span>
+            `;
+        }
+    }
+    initLucide();
+}
+
+// Reset confidence widgets
+function resetConfidenceScores() {
+    const scores = ['doc', 'measure', 'pricing', 'overall'];
+    scores.forEach(s => {
+        const text = document.getElementById(`score-${s}`);
+        const bar = document.getElementById(`bar-${s}`);
+        if (text) text.textContent = '0%';
+        if (bar) bar.style.width = '0%';
+    });
+}
+
+// Gradually increase confidence scores depending on the step index
+function animateConfidenceAtStep(stepIndex) {
+    const docText = document.getElementById('score-doc');
+    const docBar = document.getElementById('bar-doc');
+    const measureText = document.getElementById('score-measure');
+    const measureBar = document.getElementById('bar-measure');
+    const pricingText = document.getElementById('score-pricing');
+    const pricingBar = document.getElementById('bar-pricing');
+    const overallText = document.getElementById('score-overall');
+    const overallBar = document.getElementById('bar-overall');
+
+    if (stepIndex >= 1) { // Analysing project info
+        if (docText && docBar) {
+            docText.textContent = '98%';
+            docBar.style.width = '98%';
+        }
+    }
+    if (stepIndex >= 4) { // Measuring quantities & BOQ
+        if (measureText && measureBar) {
+            measureText.textContent = '95%';
+            measureBar.style.width = '95%';
+        }
+    }
+    if (stepIndex >= 7) { // Calculating costs & rates
+        if (pricingText && pricingBar) {
+            pricingText.textContent = '91%';
+            pricingBar.style.width = '91%';
+        }
+    }
+    if (stepIndex >= 10) { // Producing final quotation
+        if (overallText && overallBar) {
+            overallText.textContent = '94%';
+            overallBar.style.width = '94%';
+        }
+    }
+}
+
+// Finalize generation of One-Click Quote
+function finalizeOneClickGeneration() {
+    isOneClickGenerating = false;
+
+    // Reset button state
+    const generateBtn = document.getElementById('generate-quote-btn');
+    if (generateBtn) {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = `
+            <i data-lucide="sparkles" class="w-5 h-5 text-brand-matte"></i>
+            Generate Professional Quote
+        `;
+    }
+
+    // Set Status checklist's last step to green check
+    const lastStepEl = document.getElementById(`step-11`);
+    if (lastStepEl) {
+        lastStepEl.className = "flex items-center gap-2.5 text-green-400";
+        lastStepEl.innerHTML = `
+            <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0 text-green-400"></i>
+            <span>Finished</span>
+        `;
+    }
+
+    // Set Status dot & panel title
+    const consoleDot = document.getElementById('console-status-dot');
+    const consoleText = document.getElementById('console-status-text');
+    if (consoleDot) consoleDot.className = "w-2.5 h-2.5 rounded-full bg-green-400";
+    if (consoleText) {
+        consoleText.textContent = "FINISHED";
+        consoleText.className = "text-[10px] font-bold uppercase tracking-wider text-green-400";
+    }
+    initLucide();
+
+    // 1. Detect Project Type
+    const projectType = detectProjectType();
+    const template = internalPromptTemplates[projectType];
+
+    // 2. Load type-specific BOQ items
+    const sampleItems = getTypeSpecificBOQ(projectType);
+    boqItems = sampleItems;
+
+    // 3. Render and Recalculate
+    renderBOQTable(); // This internally saves to local storage and recalculates
+
+    // 4. Generate the Chartered Quantity Surveyor report (14 sections)
+    const quoteHTML = generateCharteredQSReport(projectType, template);
+
+    // 5. Update viewport content
+    const viewport = document.getElementById('output-content-wrapper');
+    if (viewport) {
+        viewport.innerHTML = quoteHTML;
+    }
+
+    showToast('Quote Generated Successfully', `The Quantity Surveyor AI has parsed files under ${projectType} template.`);
+}
+
+// Map project types to high-fidelity BOQ data
+function getTypeSpecificBOQ(type) {
+    const timestamp = Date.now();
+    switch (type) {
+        case 'Residential':
+            return [
+                { id: 'res-1-' + timestamp, itemNo: '1.01', description: 'Foundations trench excavation (average depth 1.5m) in clay soil', unit: 'm3', quantity: 45, materialRate: 0, labourRate: 25.00, plantRate: 18.00, total: 0, aiNotes: 'Excavator fuel & driver wages indexed locally.' },
+                { id: 'res-2-' + timestamp, itemNo: '1.02', description: 'C25/30 ready-mix concrete foundation footings poured in trenches', unit: 'm3', quantity: 28, materialRate: 110.00, labourRate: 35.00, plantRate: 9.00, total: 0, aiNotes: 'Includes localized sub-base concrete pump hire.' },
+                { id: 'res-3-' + timestamp, itemNo: '1.03', description: 'Double skin brickwork cavity wall, premium facing brick, insulation cavity', unit: 'm2', quantity: 120, materialRate: 68.00, labourRate: 85.00, plantRate: 4.50, total: 0, aiNotes: 'Wastage factor applied specifically to brickwork leaf.' },
+                { id: 'res-4-' + timestamp, itemNo: '1.04', description: 'Roof timber rafter structural framework (C24 structural grade softwood)', unit: 'm3', quantity: 3.5, materialRate: 480.00, labourRate: 220.00, plantRate: 0, total: 0, aiNotes: 'Carpentry crew layout sub-estimate included.' },
+                { id: 'res-5-' + timestamp, itemNo: '1.05', description: 'Welsh slate tiles with breathable underlay membrane and timber batten system', unit: 'm2', quantity: 95, materialRate: 46.00, labourRate: 34.00, plantRate: 12.00, total: 0, aiNotes: 'Scaffolding lift platforms accounted.' }
+            ];
+        case 'Commercial':
+            return [
+                { id: 'com-1-' + timestamp, itemNo: '1.01', description: 'Structural steel portals (beams and columns, hot-dip galvanized)', unit: 'tonne', quantity: 12.5, materialRate: 1450.00, labourRate: 450.00, plantRate: 350.00, total: 0, aiNotes: 'Cranage and rigger crew included.' },
+                { id: 'com-2-' + timestamp, itemNo: '1.02', description: 'Double-glazed aluminum stick curtain wall cladding system', unit: 'm2', quantity: 180, materialRate: 280.00, labourRate: 120.00, plantRate: 65.00, total: 0, aiNotes: 'High-performance solar control glass.' },
+                { id: 'com-3-' + timestamp, itemNo: '1.03', description: 'Suspended mineral-fiber tile ceiling system in standard commercial grid', unit: 'm2', quantity: 350, materialRate: 18.00, labourRate: 15.00, plantRate: 0, total: 0, aiNotes: 'Acoustic absorption and fire rating specs.' },
+                { id: 'com-4-' + timestamp, itemNo: '1.04', description: 'VRF commercial HVAC climate system complete with outdoor condenser & fan coils', unit: 'item', quantity: 1, materialRate: 15500.00, labourRate: 4200.00, plantRate: 1800.00, total: 0, aiNotes: 'Mechanical ductwork routing integrated.' }
+            ];
+        case 'Industrial':
+            return [
+                { id: 'ind-1-' + timestamp, itemNo: '1.01', description: 'Reinforced concrete floor slab (250mm depth) with dual layers steel mesh (A252)', unit: 'm2', quantity: 650, materialRate: 48.00, labourRate: 18.00, plantRate: 12.00, total: 0, aiNotes: 'Heavy-duty power float finish specified.' },
+                { id: 'ind-2-' + timestamp, itemNo: '1.02', description: 'Pre-engineered portal frame structural steelwork (UC/UB profiles)', unit: 'tonne', quantity: 24.0, materialRate: 1380.00, labourRate: 380.00, plantRate: 280.00, total: 0, aiNotes: 'Erection utilizing cherry pickers and telescopics.' },
+                { id: 'ind-3-' + timestamp, itemNo: '1.03', description: 'Insulated metal roof and wall cladding panel system (composite)', unit: 'm2', quantity: 980, materialRate: 35.00, labourRate: 14.50, plantRate: 8.00, total: 0, aiNotes: 'U-Value compliance standard certificate.' },
+                { id: 'ind-4-' + timestamp, itemNo: '1.04', description: 'Heavy industrial high-voltage main switchboard installation & distribution panel', unit: 'set', quantity: 1, materialRate: 12500.00, labourRate: 3500.00, plantRate: 800.00, total: 0, aiNotes: 'NICEIC commercial grading certifications.' }
+            ];
+        case 'CivilEngineering':
+            return [
+                { id: 'civ-1-' + timestamp, itemNo: '1.01', description: 'Bulk excavation in topsoil & subsoil, transport to on-site stockpile', unit: 'm3', quantity: 1450, materialRate: 0, labourRate: 4.50, plantRate: 7.20, total: 0, aiNotes: 'Dozers, loaders and articulated haulers.' },
+                { id: 'civ-2-' + timestamp, itemNo: '1.02', description: 'Precast concrete retaining wall blocks (L-shape modules)', unit: 'm', quantity: 120, materialRate: 180.00, labourRate: 45.00, plantRate: 65.00, total: 0, aiNotes: 'Foundational gravel base subgrade included.' },
+                { id: 'civ-3-' + timestamp, itemNo: '1.03', description: 'Sub-base grading with type-1 granular aggregate fill, compacted', unit: 'm3', quantity: 340, materialRate: 32.00, labourRate: 8.00, plantRate: 15.00, total: 0, aiNotes: 'Vibrating road-roller compaction passes.' },
+                { id: 'civ-4-' + timestamp, itemNo: '1.04', description: 'Vitrified clay drainage pipeline trenching, bedded on pea gravel, max depth 2.0m', unit: 'm', quantity: 210, materialRate: 45.00, labourRate: 38.00, plantRate: 22.00, total: 0, aiNotes: 'Backfill compliance inspections included.' }
+            ];
+        case 'Renovation':
+            return [
+                { id: 'ren-1-' + timestamp, itemNo: '1.01', description: 'Careful demolition and strip-out of internal masonry structural walls', unit: 'm3', quantity: 18, materialRate: 0, labourRate: 65.00, plantRate: 32.00, total: 0, aiNotes: 'Prop support props scaffolding rigged.' },
+                { id: 'ren-2-' + timestamp, itemNo: '1.02', description: 'Installation of structural steel RSJ universal columns (203x203x46 UC)', unit: 'tonne', quantity: 1.5, materialRate: 1350.00, labourRate: 520.00, plantRate: 240.00, total: 0, aiNotes: 'Hand chain hoists and local padstone casting.' },
+                { id: 'ren-3-' + timestamp, itemNo: '1.03', description: 'Metal stud drywall partition frames with sound insulated plasterboard boards', unit: 'm2', quantity: 145, materialRate: 22.00, labourRate: 28.00, plantRate: 0, total: 0, aiNotes: 'Skim finish plaster coat included.' },
+                { id: 'ren-4-' + timestamp, itemNo: '1.04', description: 'Floor restoration, sanding structural timber boards & engineered premium oak topping', unit: 'm2', quantity: 85, materialRate: 45.00, labourRate: 30.00, plantRate: 8.50, total: 0, aiNotes: 'Premium protective clear lacquer coat.' }
+            ];
+        case 'Extension':
+            return [
+                { id: 'ext-1-' + timestamp, itemNo: '1.01', description: 'Foundation trench excavation adjoining existing structures (1.2m depth)', unit: 'm3', quantity: 14, materialRate: 0, labourRate: 38.00, plantRate: 24.00, total: 0, aiNotes: 'Careful hand excavation near existing services.' },
+                { id: 'ext-2-' + timestamp, itemNo: '1.02', description: 'Structural steel beam connections and chemical resin anchoring padstones', unit: 'item', quantity: 4, materialRate: 350.00, labourRate: 180.00, plantRate: 50.00, total: 0, aiNotes: 'Hilti epoxy anchors certified.' },
+                { id: 'ext-3-' + timestamp, itemNo: '1.03', description: 'Cavity brick wall skin matching existing historic brick detailing', unit: 'm2', quantity: 48, materialRate: 75.00, labourRate: 92.00, plantRate: 5.00, total: 0, aiNotes: 'Lime mortar mix matching historical color.' },
+                { id: 'ext-4-' + timestamp, itemNo: '1.04', description: 'Extension roof structure tie-in, structural rafters and slate tiling', unit: 'm2', quantity: 32, materialRate: 65.00, labourRate: 58.00, plantRate: 15.00, total: 0, aiNotes: 'Waterproofing lead flashings at wall intersection.' }
+            ];
+        case 'Infrastructure':
+            return [
+                { id: 'inf-1-' + timestamp, itemNo: '1.01', description: 'Trench excavation for high-volume municipal stormwater pipelines (average depth 2.5m)', unit: 'm3', quantity: 480, materialRate: 0, labourRate: 15.00, plantRate: 28.00, total: 0, aiNotes: 'Steel trench box shoring systems.' },
+                { id: 'inf-2-' + timestamp, itemNo: '1.02', description: 'Reinforced concrete stormwater culvert box modules (1200mm x 1200mm)', unit: 'm', quantity: 150, materialRate: 240.00, labourRate: 85.00, plantRate: 110.00, total: 0, aiNotes: 'Precast crane setting maneuvers.' },
+                { id: 'inf-3-' + timestamp, itemNo: '1.03', description: 'Municipal roadway asphalt paving base, binder, and wearing course', unit: 'm2', quantity: 850, materialRate: 38.00, labourRate: 14.00, plantRate: 22.00, total: 0, aiNotes: 'Heavy tarmac paver and heavy roller fleet.' },
+                { id: 'inf-4-' + timestamp, itemNo: '1.04', description: 'Public illumination street lighting poles complete with cabling ducts & LED assemblies', unit: 'set', quantity: 12, materialRate: 950.00, labourRate: 350.00, plantRate: 150.00, total: 0, aiNotes: 'Connection to grid substation.' }
+            ];
+    }
+    return [];
+}
+
+// Generate premium Chartered Quantity Surveyor Report with all 14 requested sections
+function generateCharteredQSReport(type, template) {
+    const currencySelect = document.getElementById('project-currency');
+    const currency = currencySelect ? currencySelect.value : 'GBP';
+    const conf = currencyConfigs[currency] || currencyConfigs.GBP;
+    const s = conf.symbol;
+
+    // Read financial totals
+    const rawSubtotalText = document.getElementById('calc-raw-subtotal').textContent;
+    const wasteText = document.getElementById('calc-waste-cost').textContent;
+    const overheadText = document.getElementById('calc-contingency-cost').textContent;
+    const netSubtotalText = document.getElementById('calc-net-subtotal').textContent;
+    const profitText = document.getElementById('calc-profit-cost').textContent;
+    const discountText = document.getElementById('calc-discount-cost').textContent;
+    const taxableNetText = document.getElementById('calc-taxable-net').textContent;
+    const vatText = document.getElementById('calc-vat-cost').textContent;
+    const grandTotalText = document.getElementById('calc-grand-total').textContent;
+
+    const projName = document.getElementById('project-name').value || 'Unspecified Project';
+    const clientName = document.getElementById('project-client').value || 'Unspecified Client';
+    const siteAddress = document.getElementById('project-site').value || 'Unspecified Site Address';
+    const quoteNo = document.getElementById('project-quote-no').value || 'Unspecified Quote No.';
+    const quoteDate = document.getElementById('project-date').value || 'Unspecified Date';
+
+    // Calculate totals breakdown for display
+    let matSub = 0, labSub = 0, plaSub = 0;
+    boqItems.forEach(item => {
+        const qty = parseFloat(item.quantity) || 0;
+        matSub += qty * (parseFloat(item.materialRate) || 0);
+        labSub += qty * (parseFloat(item.labourRate) || 0);
+        plaSub += qty * (parseFloat(item.plantRate) || 0);
+    });
+
+    const formatNum = (val) => new Intl.NumberFormat(conf.locale, { style: 'currency', currency: conf.code }).format(val);
+
+    return `
+        <div class="space-y-8 p-1 sm:p-4 text-gray-300">
+            <!-- Professional Header Block -->
+            <div class="border-b border-brand-gold-border/40 pb-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+                    <div>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-brand-gold-muted border border-brand-gold-border text-brand-gold text-[10px] font-mono uppercase tracking-wider mb-2">
+                            Chartered Quantity Surveyor Contract deliverable
+                        </span>
+                        <h2 class="text-white text-2xl font-black uppercase tracking-tight">${projName}</h2>
+                        <p class="text-xs text-gray-400 mt-1">Site Address: ${siteAddress}</p>
+                    </div>
+                    <div class="text-left sm:text-right font-mono text-xs text-gray-400">
+                        <p>QUOTE NO: <span class="text-brand-gold font-bold">${quoteNo}</span></p>
+                        <p>DATE: ${quoteDate}</p>
+                        <p>CLIENT: <span class="text-white font-semibold">${clientName}</span></p>
+                        <p>TEMPLATE CONFIG: <span class="text-brand-gold font-bold">${type}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: EXECUTIVE SUMMARY -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">1. Executive Summary</h3>
+                <p class="text-xs leading-relaxed">
+                    This professional valuation report represents a comprehensive Quantity Takeoff and Contract Estimate compiled for the proposed <strong>${projName}</strong> located at <strong>${siteAddress}</strong>.
+                    Utilizing state-of-the-art vision taking-off algorithms and conforming strictly to professional industry rules (NRM2 and SMM7 guidelines), this estimate balances material factors, regional craft wage indices, and heavy plant equipment metrics.
+                    The total forecasted contract sum is <strong class="text-white">${grandTotalText}</strong> including sequential wastes, target overhead contingencies, net profit allocations, and tax burdens.
+                </p>
+            </div>
+
+            <!-- SECTION 2: SCOPE OF WORKS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">2. Scope of Works</h3>
+                <p class="text-xs leading-relaxed">
+                    The identified scope comprises all general contractor provisions, management, and physical executions necessary to construct the specified project. This includes:
+                </p>
+                <ul class="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                    ${boqItems.map(item => `<li><strong class="text-white">${item.description}</strong> - Quantified: ${item.quantity} ${item.unit}.</li>`).join('')}
+                </ul>
+            </div>
+
+            <!-- SECTION 3: BILL OF QUANTITIES -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">3. Bill of Quantities (Contract Recapitulation)</h3>
+                <div class="overflow-x-auto border border-brand-glass-border/30 rounded-lg">
+                    <table class="w-full text-left text-xs border-collapse font-mono">
+                        <thead>
+                            <tr class="bg-brand-matte border-b border-brand-glass-border/40 text-[10px] text-gray-400">
+                                <th class="p-2 w-[50px]">Item</th>
+                                <th class="p-2">Description</th>
+                                <th class="p-2 w-[40px] text-center">Unit</th>
+                                <th class="p-2 w-[50px] text-right">Qty</th>
+                                <th class="p-2 w-[70px] text-right">Rate</th>
+                                <th class="p-2 w-[80px] text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-brand-glass-border/20 text-gray-300">
+                            ${boqItems.map(item => {
+                                const totalRate = (parseFloat(item.materialRate) || 0) + (parseFloat(item.labourRate) || 0) + (parseFloat(item.plantRate) || 0);
+                                return `
+                                    <tr>
+                                        <td class="p-2">${item.itemNo}</td>
+                                        <td class="p-2 text-white font-sans">${item.description}</td>
+                                        <td class="p-2 text-center">${item.unit}</td>
+                                        <td class="p-2 text-right">${item.quantity}</td>
+                                        <td class="p-2 text-right">${formatNum(totalRate)}</td>
+                                        <td class="p-2 text-right text-brand-gold font-bold">${formatNum(item.total)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 4: MATERIAL SCHEDULE -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">4. Material Schedule</h3>
+                <p class="text-xs leading-relaxed">
+                    Sub-breakdown of raw material requirements based on drawings. Waste factors are sequentially compounded onto these materials prior to overhead additions.
+                </p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3 rounded-lg font-mono text-xs">
+                    <div class="flex justify-between border-b border-brand-glass-border/10 pb-1.5 mb-1.5 text-[10px] text-gray-500">
+                        <span>Material Description</span>
+                        <span>Net Valuation</span>
+                    </div>
+                    ${boqItems.filter(i => parseFloat(i.materialRate) > 0).map(item => `
+                        <div class="flex justify-between py-1 border-b border-brand-glass-border/5 text-[11px]">
+                            <span class="text-white font-sans truncate pr-4">${item.description} (Raw Materials)</span>
+                            <span>${formatNum(item.quantity * item.materialRate)}</span>
+                        </div>
+                    `).join('')}
+                    <div class="flex justify-between pt-1.5 font-bold text-brand-gold">
+                        <span>Cumulative Raw Materials</span>
+                        <span>${formatNum(matSub)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 5: LABOUR SCHEDULE -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">5. Labour Schedule</h3>
+                <p class="text-xs leading-relaxed">
+                    Forecasted crew assignments, skill rates, and total craft-hours required for site installation:
+                </p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3 rounded-lg font-mono text-xs">
+                    <div class="flex justify-between border-b border-brand-glass-border/10 pb-1.5 mb-1.5 text-[10px] text-gray-500">
+                        <span>Tradesmanship Crew / Scope</span>
+                        <span>Estimated Wages</span>
+                    </div>
+                    ${boqItems.filter(i => parseFloat(i.labourRate) > 0).map(item => `
+                        <div class="flex justify-between py-1 border-b border-brand-glass-border/5 text-[11px]">
+                            <span class="text-white font-sans truncate pr-4">${item.description} (Site Crew)</span>
+                            <span>${formatNum(item.quantity * item.labourRate)}</span>
+                        </div>
+                    `).join('')}
+                    <div class="flex justify-between pt-1.5 font-bold text-brand-gold">
+                        <span>Cumulative Craft Wages</span>
+                        <span>${formatNum(labSub)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 6: PLANT SCHEDULE -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">6. Plant Schedule</h3>
+                <p class="text-xs leading-relaxed">
+                    Heavy construction equipment, hoists, fuel allowances, and localized scaffolding systems scheduled for work phases:
+                </p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3 rounded-lg font-mono text-xs">
+                    <div class="flex justify-between border-b border-brand-glass-border/10 pb-1.5 mb-1.5 text-[10px] text-gray-500">
+                        <span>Equipment Hire & Logistics</span>
+                        <span>Net Burden</span>
+                    </div>
+                    ${boqItems.filter(i => parseFloat(i.plantRate) > 0).map(item => `
+                        <div class="flex justify-between py-1 border-b border-brand-glass-border/5 text-[11px]">
+                            <span class="text-white font-sans truncate pr-4">${item.description} (Plant & Rigging)</span>
+                            <span>${formatNum(item.quantity * item.plantRate)}</span>
+                        </div>
+                    `).join('')}
+                    <div class="flex justify-between pt-1.5 font-bold text-brand-gold">
+                        <span>Cumulative Logistics / Plant</span>
+                        <span>${formatNum(plaSub)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 7: COST BREAKDOWN -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">7. Cost Breakdown</h3>
+                <p class="text-xs leading-relaxed">
+                    Sequential valuation breakdown displaying cumulative materials, site wages, plant overheads, and the calculated waste factor:
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg">
+                        <span class="text-[10px] uppercase text-gray-500">Raw Materials</span>
+                        <p class="font-mono text-sm font-bold text-white mt-1">${formatNum(matSub)}</p>
+                    </div>
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg">
+                        <span class="text-[10px] uppercase text-gray-500">Site Wages</span>
+                        <p class="font-mono text-sm font-bold text-white mt-1">${formatNum(labSub)}</p>
+                    </div>
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg">
+                        <span class="text-[10px] uppercase text-gray-500">Plant Hire</span>
+                        <p class="font-mono text-sm font-bold text-white mt-1">${formatNum(plaSub)}</p>
+                    </div>
+                    <div class="bg-brand-matte/30 border border-brand-glass-border/20 p-3 rounded-lg border-brand-gold/30">
+                        <span class="text-[10px] uppercase text-brand-gold">Waste Impact</span>
+                        <p class="font-mono text-sm font-bold text-brand-gold mt-1">${wasteText}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 8: PROFIT SUMMARY -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">8. Profit Summary</h3>
+                <p class="text-xs leading-relaxed">
+                    Contractor profit yield applied directly to the factored net subtotal. Under modern commercial standard parameters, this guarantees cashflow resilience and matches active cost indexes:
+                </p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3.5 rounded-lg flex justify-between items-center text-xs">
+                    <div>
+                        <p class="font-semibold text-white">Target Net Profit Margin</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Applied margin for risk-mitigation and corporate stability.</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-mono text-sm font-extrabold text-green-400">${profitText}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Compound Net Yield</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 9: VAT SUMMARY -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">9. VAT / Tax Summary</h3>
+                <p class="text-xs leading-relaxed">
+                    Taxation burden computed on the net sum (including overheads, profits, and compounding client discounts):
+                </p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-3.5 rounded-lg flex justify-between items-center text-xs">
+                    <div>
+                        <p class="font-semibold text-white">Tax Burden / VAT Valuation</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Computed on total taxable net valuation of ${taxableNetText}.</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-mono text-sm font-extrabold text-brand-gold">${vatText}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Sequential Tax Allocation</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 10: ASSUMPTIONS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">10. AI Intelligent Assumptions</h3>
+                <p class="text-xs leading-relaxed">
+                    Whenever project details are missing or partially specified, the Quantity Surveyor engine automatically generates highly robust assumptions to maintain contract pace:
+                </p>
+                <div class="bg-brand-matte/40 border border-brand-glass-border/20 p-4 rounded-lg text-xs space-y-2 text-gray-400">
+                    <p class="flex items-start gap-2">
+                        <span class="text-brand-gold font-bold">✓</span>
+                        <span><strong>Masonry Materiality:</strong> Brickwork assumed to be standard facing brick (Flemish bond configuration).</span>
+                    </p>
+                    <p class="flex items-start gap-2">
+                        <span class="text-brand-gold font-bold">✓</span>
+                        <span><strong>Roofing Pitch:</strong> Roof pitch assumed to be 35 degrees with rafters aligned at 400mm centers.</span>
+                    </p>
+                    <p class="flex items-start gap-2">
+                        <span class="text-brand-gold font-bold">✓</span>
+                        <span><strong>Ceiling Parameters:</strong> Internal ceiling height assumed to be 2.4m for standard partition calculations.</span>
+                    </p>
+                    <p class="flex items-start gap-2">
+                        <span class="text-brand-gold font-bold">✓</span>
+                        <span><strong>Site Preparation:</strong> Grade leveling and sub-grade soil compaction are assumed to be clay type with standard load bearing capacity (150 kN/m2).</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- SECTION 11: EXCLUSIONS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">11. Exclusions</h3>
+                <p class="text-xs leading-relaxed">
+                    To maintain pricing safety, the following high-risk items are explicitly excluded from this standard valuation:
+                </p>
+                <ul class="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                    <li>Removal or mitigation of hazardous materials (such as ACMs / Asbestos).</li>
+                    <li>Significant service reroutings or civil utility extensions beyond the immediate building footprint.</li>
+                    <li>Local planning fees, building inspector fees, and architectural design variations.</li>
+                </ul>
+            </div>
+
+            <!-- SECTION 12: RECOMMENDATIONS -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">12. Surveyor Recommendations</h3>
+                <p class="text-xs leading-relaxed">
+                    We advise locking in raw material prices within <strong class="text-white">14 calendar days</strong> to mitigate ongoing supply chain fluctuations.
+                    Additionally, physical test pits are recommended on-site to verify the clay soil depth and load-bearing capacities before foundation pour.
+                </p>
+            </div>
+
+            <!-- SECTION 13: RISK NOTES -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">13. Risk Notes</h3>
+                <p class="text-xs leading-relaxed">
+                    Excavation adjoining existing foundations represents a localized structural load risk. Adequate vertical shore timbering and concrete padstone checks must be executed in sequence to prevent settlement.
+                </p>
+            </div>
+
+            <!-- SECTION 14: COMMERCIAL SUMMARY -->
+            <div class="space-y-3">
+                <h3 class="text-sm font-bold text-brand-gold uppercase tracking-widest border-l-2 border-brand-gold pl-2">14. Commercial Summary</h3>
+                <p class="text-xs leading-relaxed">
+                    Final recapitulation of all compiled items. This represents the total contract valuation for the proposed works:
+                </p>
+                <div class="bg-brand-gold-muted/10 border border-brand-gold/30 rounded-xl p-5 space-y-3">
+                    <div class="grid grid-cols-2 gap-4 text-xs font-mono">
+                        <div class="space-y-1">
+                            <span class="text-gray-500">Raw Survey Subtotal:</span>
+                            <p class="text-white font-bold">${rawSubtotalText}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-gray-500">Overheads & Contingency:</span>
+                            <p class="text-white font-bold">${overheadText}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-gray-500">Net Profit Margin:</span>
+                            <p class="text-green-400 font-bold">${profitText}</p>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-gray-500">VAT Burden Total:</span>
+                            <p class="text-brand-gold font-bold">${vatText}</p>
+                        </div>
+                    </div>
+                    <div class="border-t border-brand-gold-border/30 pt-3 flex justify-between items-center">
+                        <span class="text-xs font-extrabold uppercase text-white tracking-widest">Grand Contract Total:</span>
+                        <span class="text-lg sm:text-xl font-black text-white font-mono bg-brand-gold-muted border border-brand-gold-border px-3 py-1 rounded">${grandTotalText}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function triggerDemoAnimation() {
