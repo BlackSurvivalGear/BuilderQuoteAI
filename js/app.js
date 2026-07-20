@@ -449,6 +449,7 @@ function initWorkspaceData() {
                 renderUploadedFilesList();
                 renderDocumentRegisterAndReadiness();
             }
+            window.uploadedFiles = uploadedFiles;
 
         } catch (e) {
             console.error('Failed to parse local storage data:', e);
@@ -478,6 +479,7 @@ function saveWorkspaceToLocalStorage() {
     };
 
     localStorage.setItem('builder_quote_data', JSON.stringify(dataPayload));
+    window.uploadedFiles = uploadedFiles;
 }
 
 // Dynamic currency symbols updating
@@ -2342,7 +2344,7 @@ function executeSimulatedAction(actionId, startTime) {
                             <h4 class="text-brand-gold font-bold text-lg">AI Surveyor Pricing Analysis</h4>
                             <p class="text-[11px] text-gray-400">Financial overview and wage breakdown.</p>
                         </div>
-                        <p class="text-xs text-gray-300">The composite cost of this project is heavily driven by timber and slate materials (65% of net valuation). The labour to lay cavity wall skins averages 4.5 hours per square meter of face brickwork, which is standard for residential extensions in Mayfair, London.</p>
+                        <p class="text-xs text-gray-300">The composite cost of this project is heavily driven by materials and regional wages. The labour to lay structural elements is dynamically calculated according to the selected regional multiplier and pricing settings.</p>
                     </div>
                 `;
                 break;
@@ -2985,19 +2987,19 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
 
     let wasAutoFilled = false;
     if (!projNameInput.value) {
-        projNameInput.value = 'Mayfair Premium Residential Refurb';
+        projNameInput.value = 'Not Supplied';
         wasAutoFilled = true;
     }
     if (!projClientInput.value) {
-        projClientInput.value = 'Mr. & Mrs. Henderson';
+        projClientInput.value = 'Not Supplied';
         wasAutoFilled = true;
     }
     if (!projSiteInput.value) {
-        projSiteInput.value = '12 Mayfair Gardens, London, W1J 8AJ';
+        projSiteInput.value = 'Awaiting Information';
         wasAutoFilled = true;
     }
     if (!projQuoteNoInput.value) {
-        projQuoteNoInput.value = 'BQ-2024-' + Math.floor(100 + Math.random() * 900);
+        projQuoteNoInput.value = 'BQ-PENDING-' + Math.floor(100 + Math.random() * 900);
         wasAutoFilled = true;
     }
     if (!projDateInput.value) {
@@ -3007,7 +3009,7 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
 
     const projDescInput = document.getElementById('workspace-project-description');
     if (!projDescInput.value) {
-        projDescInput.value = 'Comprehensive high-spec refurbishment of a double-fronted residential house in Mayfair. Requires structural masonry partition removal, steel installation, first floor stud partitions, plastering, full electrical rewire, underfloor heating loops, and natural Welch slate roofing with breathable membrane. Premium oak floor finishes required throughout.';
+        projDescInput.value = '';
         wasAutoFilled = true;
     }
 
@@ -3275,6 +3277,133 @@ function getTypeSpecificBOQ(type) {
             ];
     }
     return [];
+}
+
+function renderQuotationNotAvailablePage(finalOutputs) {
+    const uploadedFiles = window.uploadedFiles || [];
+    const hasCategory = (cat) => uploadedFiles.some(f => f.classification === cat);
+    const stageCompleted = (id) => finalOutputs[id] && finalOutputs[id].status !== "skipped" && finalOutputs[id].status !== "failed";
+
+    // Build Current Project Status Checklist
+    const statusItems = [
+        { label: "Documents Uploaded", done: uploadedFiles.length > 0 },
+        { label: "Document Intelligence Complete", done: stageCompleted("document-intelligence") },
+        { label: "Regional Analysis Complete", done: stageCompleted("regional-pricing") },
+        { label: "Risk Assessment Complete", done: stageCompleted("risk-analysis") },
+        { label: "Clarification Report Generated", done: stageCompleted("clarification-generator") }
+    ];
+
+    const completedHTML = statusItems.map(item => {
+        if (item.done) {
+            return `
+                <div class="flex items-center gap-2.5 text-green-400 font-semibold text-xs">
+                    <i data-lucide="check-circle-2" class="w-4.5 h-4.5 shrink-0 text-green-400"></i>
+                    <span>✓ ${item.label}</span>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="flex items-center gap-2.5 text-gray-500 font-medium text-xs">
+                    <i data-lucide="circle" class="w-4.5 h-4.5 shrink-0 text-gray-600"></i>
+                    <span>• ${item.label} (Not Complete)</span>
+                </div>
+            `;
+        }
+    }).join("");
+
+    // Build Skipped List
+    const skippedStages = [
+        { id: "drawing-interpreter", label: "Drawing Interpretation" },
+        { id: "quantity-surveyor", label: "Quantity Takeoff" },
+        { id: "boq-generator", label: "BOQ Generation" },
+        { id: "cost-estimator", label: "Cost Estimation" }
+    ];
+
+    const skippedHTML = skippedStages.map(stage => {
+        if (!stageCompleted(stage.id)) {
+            return `
+                <div class="flex items-center gap-2.5 text-yellow-500 font-medium text-xs">
+                    <i data-lucide="alert-triangle" class="w-4.5 h-4.5 shrink-0 text-yellow-500"></i>
+                    <span>• ${stage.label}</span>
+                </div>
+            `;
+        }
+        return "";
+    }).filter(Boolean).join("");
+
+    // Build Missing Documents List (Strict check)
+    const missingDocsList = [];
+    if (!hasCategory("Architectural Drawings")) {
+        missingDocsList.push("Architectural Drawings");
+    }
+    if (!hasCategory("Structural Drawings")) {
+        missingDocsList.push("Structural Drawings");
+    }
+    if (!uploadedFiles.some(f => f.classification === "Schedules" && f.name.toLowerCase().includes("door"))) {
+        missingDocsList.push("Door Schedule");
+    }
+    if (!uploadedFiles.some(f => f.classification === "Schedules" && f.name.toLowerCase().includes("window"))) {
+        missingDocsList.push("Window Schedule");
+    }
+
+    const missingHTML = missingDocsList.map(doc => `
+        <div class="flex items-center gap-2.5 text-red-400 font-semibold text-xs">
+            <i data-lucide="x-circle" class="w-4.5 h-4.5 shrink-0 text-red-400"></i>
+            <span>• ${doc}</span>
+        </div>
+    `).join("");
+
+    return `
+        <div class="space-y-6 p-2 sm:p-6 text-gray-300">
+            <!-- Header Status -->
+            <div class="border-b border-brand-glass-border pb-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-mono uppercase tracking-wider mb-2">
+                    Quotation Blocked
+                </span>
+                <h2 class="text-white text-xl font-bold uppercase tracking-tight">Quotation Not Yet Available</h2>
+                <p class="text-xs text-gray-400 mt-1">BuilderQuoteAI cannot generate a professional quotation because insufficient project information has been supplied.</p>
+            </div>
+
+            <!-- Current Project Status -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-l-2 border-brand-gold pl-2">Current Project Status</h3>
+                <div class="space-y-2 pl-2">
+                    ${completedHTML}
+                </div>
+            </div>
+
+            <!-- Skipped Stages -->
+            ${skippedHTML ? `
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-l-2 border-brand-gold pl-2">Skipped</h3>
+                <div class="space-y-2 pl-2">
+                    ${skippedHTML}
+                </div>
+            </div>
+            ` : ""}
+
+            <!-- Missing Documents -->
+            ${missingHTML ? `
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-l-2 border-brand-gold pl-2">Missing Documents</h3>
+                <div class="space-y-2 pl-2">
+                    ${missingHTML}
+                </div>
+            </div>
+            ` : ""}
+
+            <!-- Next Step Card -->
+            <div class="bg-brand-matte/60 border border-brand-glass-border rounded-xl p-4 space-y-2 mt-4">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="info" class="w-4 h-4 text-brand-gold"></i>
+                    Next Step
+                </h4>
+                <p class="text-xs text-gray-300 leading-relaxed">
+                    Upload the missing documents to continue automatic quantity takeoff and quotation generation.
+                </p>
+            </div>
+        </div>
+    `;
 }
 
 // Generate premium Chartered Quantity Surveyor Report with all 14 requested sections

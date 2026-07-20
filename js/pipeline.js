@@ -6,25 +6,25 @@
 
 function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
     const hasCategory = (cat) => uploadedFiles.some(f => f.classification === cat);
-    const stageCompleted = (id) => completedStages[id] && completedStages[id].status !== "skipped";
+    const stageCompleted = (id) => completedStages[id] && completedStages[id].status !== "skipped" && completedStages[id].status !== "failed";
 
     switch (stageId) {
         case "drawing-interpreter":
-            if (!hasCategory("Architectural Drawings")) {
+            if (!hasCategory("Architectural Drawings") && !hasCategory("Structural Drawings")) {
                 return {
                     applicable: false,
-                    reason: "No architectural drawings supplied.",
-                    required: "Architectural floor plans or sections."
+                    reason: "No architectural or structural drawings supplied.",
+                    required: "Architectural floor plans, elevations, sections, or structural details."
                 };
             }
             break;
 
         case "quantity-surveyor":
-            if (!hasCategory("Architectural Drawings") && !hasCategory("Structural Drawings")) {
+            if (!stageCompleted("drawing-interpreter")) {
                 return {
                     applicable: false,
-                    reason: "No measurable drawings supplied.",
-                    required: "Architectural or structural drawings."
+                    reason: "No interpreted measurable drawing information exists.",
+                    required: "Successful Drawing Interpreter stage."
                 };
             }
             break;
@@ -40,13 +40,11 @@ function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
             break;
 
         case "cost-estimator":
-            const hasQuantities = stageCompleted("quantity-surveyor");
-            const hasSpecs = hasCategory("Specifications");
-            if (!hasQuantities && !hasSpecs) {
+            if (!stageCompleted("boq-generator")) {
                 return {
                     applicable: false,
-                    reason: "No quantity takeoff or project specifications available.",
-                    required: "Tender specifications or measurable floor plans."
+                    reason: "No BOQ exists to perform estimation.",
+                    required: "Successful BOQ Generator stage results."
                 };
             }
             break;
@@ -411,20 +409,25 @@ window.BQAIPipeline = {
                         status: "success",
                         confidence: 0.98,
                         project: {
-                            projectName: inputData.projectName || "Mayfair Premium Residential Refurb",
-                            clientName: "Mr. & Mrs. Henderson",
-                            siteAddress: "12 Mayfair Gardens, London, W1J 8AJ",
-                            quoteNumber: "BQ-2024-991"
+                            projectName: inputData.projectName || "Unknown",
+                            clientName: inputData.clientName || "Not Supplied",
+                            siteAddress: inputData.siteAddress || "Awaiting Information",
+                            quoteNumber: inputData.quoteNumber || "Awaiting Information"
                         },
-                        documents: [
-                            { name: "architectural_drawings_rev_B.pdf", type: "Architectural Drawings", status: "Processed" }
-                        ],
-                        drawings: [
-                            { number: "A-101", title: "Ground Floor Plan", scale: "1:50", orientation: "North-facing" }
-                        ],
-                        issues: [
-                            { type: "Warning", message: "Missing site drainage layout plan drawings." }
-                        ]
+                        documents: (inputData.uploadedFiles || []).map(f => ({
+                            name: f.name,
+                            type: f.classification || "Other",
+                            status: "Processed"
+                        })),
+                        drawings: (inputData.uploadedFiles || []).filter(f => f.type === 'drawing').map(f => ({
+                            number: f.drawingNumber || "Unknown",
+                            title: f.name,
+                            scale: "As indicated",
+                            orientation: "Standard"
+                        })),
+                        issues: (inputData.uploadedFiles || []).length === 0 ? [
+                            { type: "Warning", message: "No source files or specification provided." }
+                        ] : []
                     };
 
                 case "drawing-interpreter":
@@ -691,7 +694,10 @@ window.BQAIPipeline = {
 
                 // Input formulation: upstream outputs are context
                 const inputPayload = {
-                    projectName: document.getElementById('project-name')?.value || "Mayfair Duplex Refurb",
+                    projectName: document.getElementById('project-name')?.value || "Unknown",
+                    clientName: document.getElementById('project-client')?.value || "Not Supplied",
+                    siteAddress: document.getElementById('project-site')?.value || "Awaiting Information",
+                    quoteNumber: document.getElementById('project-quote-no')?.value || "Awaiting Information",
                     region: document.getElementById('project-region')?.value || "London",
                     uploadedFiles: currentFiles,
                     projectDescription: document.getElementById('workspace-project-description')?.value || "",
