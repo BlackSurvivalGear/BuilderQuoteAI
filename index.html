@@ -49,6 +49,8 @@
     <link rel="stylesheet" href="css/style.css">
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 <body class="bg-brand-matte text-white antialiased selection:bg-brand-gold selection:text-brand-matte relative min-h-screen overflow-x-hidden">
 
@@ -744,6 +746,62 @@
                                 </div>
                                 <!-- Kept hidden element to avoid any other legacy script reference issues -->
                                 <pre id="console-prompt-sent" class="hidden">No prompt sent yet.</pre>
+                            </div>
+                        </div>
+
+                        <!-- Temporary AI Debug Console -->
+                        <div class="border-t border-brand-glass-border/40 pt-4 space-y-2">
+                            <div class="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                <span class="flex items-center gap-1.5 text-brand-gold">
+                                    <span class="w-2 h-2 rounded-full bg-brand-gold animate-ping"></span>
+                                    TEMPORARY AI DEBUG CONSOLE
+                                </span>
+                            </div>
+                            <div id="ai-debug-console" class="bg-brand-matte border border-brand-gold/30 rounded-xl p-4 space-y-3 font-mono text-[10px] text-gray-300">
+                                <div>
+                                    <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">1. Extracted PDF Text (First 500 chars):</span>
+                                    <pre id="debug-extracted-text" class="bg-brand-graphite p-2.5 rounded border border-brand-glass-border/40 text-gray-400 overflow-x-auto whitespace-pre-wrap max-h-[100px]">Awaiting file upload...</pre>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">2. Model Selected:</span>
+                                        <div id="debug-model" class="text-white bg-brand-graphite p-2 rounded border border-brand-glass-border/40">Sovereign-Llama3-8B</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">3. API Endpoint:</span>
+                                        <div id="debug-endpoint" class="text-white bg-brand-graphite p-2 rounded border border-brand-glass-border/40 font-bold text-yellow-500">Local Simulation</div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">4. HTTP Status:</span>
+                                        <div id="debug-http-status" class="text-white bg-brand-graphite p-2 rounded border border-brand-glass-border/40 font-bold text-green-400">200 OK</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">5. Tokens Used:</span>
+                                        <div id="debug-tokens" class="text-white bg-brand-graphite p-2 rounded border border-brand-glass-border/40">0 tok</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">6. Execution Time:</span>
+                                        <div id="debug-execution-time" class="text-white bg-brand-graphite p-2 rounded border border-brand-glass-border/40 font-bold text-brand-gold">0 ms</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">7. Prompt Sent to Model (Redacted API key):</span>
+                                    <pre id="debug-prompt-sent" class="bg-brand-graphite p-2.5 rounded border border-brand-glass-border/40 text-gray-400 overflow-x-auto whitespace-pre-wrap max-h-[150px]">Awaiting pipeline trigger...</pre>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">8. Raw AI Response (Before Parsing):</span>
+                                    <pre id="debug-raw-response" class="bg-brand-graphite p-2.5 rounded border border-brand-glass-border/40 text-gray-400 overflow-x-auto whitespace-pre-wrap max-h-[150px]">Awaiting response stream...</pre>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500 block mb-1 uppercase tracking-wider font-bold">9. Parsed JSON Output:</span>
+                                    <pre id="debug-parsed-json" class="bg-brand-graphite p-2.5 rounded border border-brand-glass-border/40 text-gray-400 overflow-x-auto whitespace-pre-wrap max-h-[150px]">Awaiting validation schemas...</pre>
+                                </div>
+                                <div>
+                                    <span class="text-red-500 block mb-1 uppercase tracking-wider font-bold">10. API Errors (If Any):</span>
+                                    <pre id="debug-errors" class="bg-brand-graphite/40 p-2.5 rounded border border-red-500/20 text-red-400 overflow-x-auto whitespace-pre-wrap max-h-[80px]">No errors logged.</pre>
+                                </div>
                             </div>
                         </div>
                     </div>
