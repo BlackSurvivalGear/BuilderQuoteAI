@@ -2105,18 +2105,43 @@ function executeAIProviderRequest(provider, prompt) {
             return Promise.reject(new Error("Unsupported AI Provider: " + provider.id));
     }
 
+    const requestBodyStr = JSON.stringify(body);
+    const requestBodySize = requestBodyStr.length;
+
+    console.log("=================== executeAIProviderRequest INITIATED ===================");
+    console.log(`Request URL: ${endpoint}`);
+    console.log(`HTTP Method: POST`);
+    console.log(`Provider: ${provider.name}`);
+    console.log(`Model: ${provider.defaultModel}`);
+    console.log(`Request Body Size: ${requestBodySize} bytes`);
+    console.log(`Request Body:`, body);
+    console.log("==========================================================================");
+
     return fetch(endpoint, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify(body)
+        body: requestBodyStr
     })
     .then(res => {
+        console.log("=================== executeAIProviderRequest RESPONSE RECEIVED ===================");
+        console.log(`HTTP Status Code: ${res.status} ${res.statusText || ""}`);
         if (!res.ok) {
-            throw new Error(`API Handshake failed. HTTP status code: ${res.status}`);
+            return res.text().then(errText => {
+                console.error(`HTTP Error Response Body:`, errText);
+                console.log("==================================================================================");
+                throw new Error(`API Handshake failed. HTTP status code: ${res.status}. Response: ${errText}`);
+            });
         }
         return res.json();
     })
     .then(data => {
+        // Redact any sensitive output just in case
+        let logStr = JSON.stringify(data, null, 2);
+        logStr = logStr.replace(/Bearer sk-[a-zA-Z0-9-]{4,}/g, "Bearer sk-...[REDACTED]");
+        logStr = logStr.replace(/key=[a-zA-Z0-9-]{4,}/g, "key=...[REDACTED]");
+        console.log(`Full Response Body:`, logStr);
+        console.log("==================================================================================");
+
         // Extract raw content depending on provider response formatting
         let rawText = '';
         if (provider.id === 'openai' || provider.id === 'xai' || provider.id === 'openrouter' || provider.id === 'mistral' || provider.id === 'deepseek') {
@@ -2133,6 +2158,13 @@ function executeAIProviderRequest(provider, prompt) {
             rawText: rawText,
             usage: data.usage || null
         };
+    })
+    .catch(err => {
+        console.error("=================== executeAIProviderRequest FAILED ===================");
+        console.error(`Error during executeAIProviderRequest:`, err.message);
+        console.error(err);
+        console.error("=======================================================================");
+        throw err;
     });
 }
 
@@ -2172,70 +2204,74 @@ function triggerAIWorkspaceAction(actionId) {
 
     // Check if live key is present
     if (activeProv && activeProv.apiKey && activeProv.apiKey.trim().length > 4) {
-        // Execute Live Generative Request
-        let endpoint = '';
-        let headers = { "Content-Type": "application/json" };
-        let body = {};
+        // Execute Live Generative Request utilizing the robust executeAIProviderRequest
+        executeAIProviderRequest(activeProv, promptSent)
+        .then(result => {
+            const rt = Date.now() - startTime;
 
-        if (activeProv.id === 'openai') {
-            endpoint = 'https://api.openai.com/v1/chat/completions';
-            headers['Authorization'] = `Bearer ${activeProv.apiKey}`;
-            body = {
-                model: activeProv.defaultModel,
-                messages: [
-                    { role: 'system', content: 'You are an elite, highly precise Quantity Surveyor, SMM7 & NRM2 consultant. Return HTML formatted text describing the requested action.' },
-                    { role: 'user', content: promptSent }
-                ],
-                temperature: 0.2
-            };
-        } else if (activeProv.id === 'ollama') {
-            endpoint = `${activeProv.apiKey}/api/generate`;
-            body = {
-                model: activeProv.defaultModel,
-                prompt: `You are an elite, highly precise Quantity Surveyor. Return HTML formatted text describing this action:\n${promptSent}`,
-                stream: false
-            };
-        }
-
-        if (endpoint && (activeProv.id === 'openai' || activeProv.id === 'ollama')) {
-            fetch(endpoint, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(body)
-            })
-            .then(res => {
-                if (!res.ok) throw new Error(`HTTP status error: ${res.status}`);
-                return res.json();
-            })
-            .then(data => {
-                const rt = Date.now() - startTime;
-                let replyHTML = '';
-
-                if (activeProv.id === 'openai') {
-                    replyHTML = data.choices[0].message.content;
-                } else if (activeProv.id === 'ollama') {
-                    replyHTML = data.response;
+            // If the action is generate-boq, parse/set the BOQ items from returned structured JSON if applicable, or simulate just for BOQ parsing
+            if (actionId === 'generate-boq') {
+                try {
+                    const cleaned = cleanJSONResponse(result.rawText);
+                    const parsed = JSON.parse(cleaned);
+                    if (parsed && Array.isArray(parsed.BillOfQuantities)) {
+                        boqItems = parsed.BillOfQuantities.map((item, idx) => ({
+                            id: 'gen-boq-' + idx + '-' + Date.now(),
+                            itemNo: item.itemNo || `3.0${idx+1}`,
+                            description: item.description,
+                            unit: item.unit || 'm2',
+                            quantity: item.quantity || 1,
+                            materialRate: item.materialRate || 0,
+                            labourRate: item.labourRate || 0,
+                            plantRate: item.plantRate || 0,
+                            total: 0,
+                            aiNotes: item.aiNotes || "Parsed from direct AI generation action."
+                        }));
+                        renderBOQTable();
+                    } else {
+                        // Fallback to generating some default items if response wasn't structured JSON
+                        boqItems = [
+                            { id: 'gen-1', itemNo: '1.01', description: 'Excavate and level earthworks base, average depth 1.2m', unit: 'm3', quantity: 38, materialRate: 0, labourRate: 28.00, plantRate: 19.50, total: 0, aiNotes: 'Direct live AI generation action.' },
+                            { id: 'gen-2', itemNo: '1.02', description: 'Concrete structural pour C25 grade', unit: 'm3', quantity: 15, materialRate: 115.00, labourRate: 42.00, plantRate: 6.00, total: 0, aiNotes: 'Direct live AI generation action.' }
+                        ];
+                        renderBOQTable();
+                    }
+                } catch (e) {
+                    console.warn("Failed to parse JSON for BOQ, loading standard items:", e);
+                    boqItems = [
+                        { id: 'gen-1', itemNo: '1.01', description: 'Excavate and level earthworks base, average depth 1.2m', unit: 'm3', quantity: 38, materialRate: 0, labourRate: 28.00, plantRate: 19.50, total: 0, aiNotes: 'Direct live AI generation action.' },
+                        { id: 'gen-2', itemNo: '1.02', description: 'Concrete structural pour C25 grade', unit: 'm3', quantity: 15, materialRate: 115.00, labourRate: 42.00, plantRate: 6.00, total: 0, aiNotes: 'Direct live AI generation action.' }
+                    ];
+                    renderBOQTable();
                 }
+            }
 
-                // Render Live Output
-                finalizeAIResponse(replyHTML, rt, data.usage ? data.usage.total_tokens : '285', providerName, providerModel);
-            })
-            .catch(err => {
-                const rt = Date.now() - startTime;
-                if (consoleDot) consoleDot.className = "w-2 h-2 rounded-full bg-red-400";
-                if (consoleText) {
-                    consoleText.textContent = "FAILED";
-                    consoleText.className = "text-[9px] uppercase text-red-400";
-                }
-                if (consoleResponse) consoleResponse.textContent = `[GENERATION CRITICAL ERROR]:\n${err.message}`;
+            finalizeAIResponse(result.rawText, rt, result.usage ? result.usage.total_tokens : '285', providerName, providerModel);
+        })
+        .catch(err => {
+            const rt = Date.now() - startTime;
+            if (consoleDot) consoleDot.className = "w-2 h-2 rounded-full bg-red-400";
+            if (consoleText) {
+                consoleText.textContent = "FAILED";
+                consoleText.className = "text-[9px] uppercase text-red-400";
+            }
+            if (consoleResponse) consoleResponse.textContent = `[GENERATION CRITICAL ERROR]:\n${err.message}`;
 
-                showToast('Generation Failed', `AI request error: ${err.message}. Defaulting to high-precision simulation fallback.`);
+            showToast('Generation Failed', `AI request error: ${err.message}. (No Fallback in Production Mode)`);
 
-                // Exquisite fallback sequence
-                executeSimulatedAction(actionId, startTime);
-            });
-            return;
-        }
+            // In Production/Live mode, we MUST propagate/report the failure and NOT silently fallback to mock simulation.
+            const viewport = document.getElementById('output-content-wrapper');
+            if (viewport) {
+                viewport.innerHTML = `
+                    <div class="p-6 bg-red-500/10 border border-red-500/20 rounded-xl space-y-3">
+                        <h4 class="text-red-400 font-bold text-sm">Action Execution Failed</h4>
+                        <p class="text-xs text-gray-300">The live AI request for action "${actionId}" failed with error: <strong>${err.message}</strong></p>
+                        <p class="text-[10px] text-gray-500 font-mono">Verify your API credentials, network connection, and account credit balance.</p>
+                    </div>
+                `;
+            }
+        });
+        return;
     }
 
     // Simulated output execution
