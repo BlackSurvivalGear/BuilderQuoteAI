@@ -4,6 +4,41 @@
  * JSON validation layer, state persistence, step reruns, and developer logging.
  */
 
+function updateAIDebugConsole(fields) {
+    const elMap = {
+        extractedText: 'debug-extracted-text',
+        model: 'debug-model',
+        endpoint: 'debug-endpoint',
+        httpStatus: 'debug-http-status',
+        tokens: 'debug-tokens',
+        executionTime: 'debug-execution-time',
+        prompt: 'debug-prompt-sent',
+        rawResponse: 'debug-raw-response',
+        parsedJson: 'debug-parsed-json',
+        errors: 'debug-errors'
+    };
+    for (const [key, id] of Object.entries(elMap)) {
+        if (fields[key] !== undefined) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (key === 'prompt' && fields[key]) {
+                    // Redact authorization or api key in header if visible
+                    let redacted = fields[key];
+                    redacted = redacted.replace(/Bearer sk-[a-zA-Z0-9-]{4,}/g, "Bearer sk-...[REDACTED]");
+                    redacted = redacted.replace(/key=[a-zA-Z0-9-]{4,}/g, "key=...[REDACTED]");
+                    redacted = redacted.replace(/"Authorization": "Bearer [^"]+"/g, '"Authorization": "Bearer sk-...[REDACTED]"');
+                    redacted = redacted.replace(/"x-api-key": "[^"]+"/g, '"x-api-key": "...[REDACTED]"');
+                    el.textContent = redacted;
+                } else if (typeof fields[key] === 'object' && fields[key] !== null) {
+                    el.textContent = JSON.stringify(fields[key], null, 2);
+                } else {
+                    el.textContent = fields[key];
+                }
+            }
+        }
+    }
+}
+
 function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
     const hasCategory = (cat) => uploadedFiles.some(f => f.classification === cat);
     const stageCompleted = (id) => completedStages[id] && completedStages[id].status !== "skipped" && completedStages[id].status !== "failed";
@@ -13,7 +48,7 @@ function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
             if (!hasCategory("Architectural Drawings") && !hasCategory("Structural Drawings")) {
                 return {
                     applicable: false,
-                    reason: "No architectural or structural drawings supplied.",
+                    reason: "No architectural drawings supplied.",
                     required: "Architectural floor plans, elevations, sections, or structural details."
                 };
             }
@@ -260,19 +295,67 @@ window.BQAIPipeline = {
             if (!providerSetting || !providerSetting.enabled || !providerSetting.apiKey || providerSetting.apiKey.trim().length < 5) {
                 const result = this.generateSimulatedOutput(stageId, inputData);
                 const duration = Date.now() - startTime;
+                const tokensVal = Math.floor(Math.random() * 150) + 200;
+
+                // Update Debug Console for Simulation
+                const filesWithText = (inputData.uploadedFiles || []).filter(f => f.extractedText);
+                const textDisplay = filesWithText.length > 0
+                    ? filesWithText.map(f => `--- ${f.name} ---\n${f.extractedText.slice(0, 500)}...`).join("\n\n")
+                    : "No extracted text found on uploaded files. (Default simulated metadata is utilized).";
+
+                if (typeof updateAIDebugConsole === 'function') {
+                    updateAIDebugConsole({
+                        extractedText: textDisplay,
+                        model: providerSetting ? providerSetting.defaultModel : "Sovereign-Llama3-8B",
+                        endpoint: "Local Simulation (generateSimulatedOutput)",
+                        httpStatus: "200 OK (Simulated)",
+                        tokens: `${tokensVal} tok`,
+                        executionTime: `${duration} ms`,
+                        prompt: `[STAGE]: ${stageId}\n[INPUT DATA]:\n${JSON.stringify(inputData, null, 2)}`,
+                        rawResponse: JSON.stringify(result, null, 2),
+                        parsedJson: result,
+                        errors: "No errors logged."
+                    });
+                }
+
                 return {
                     success: true,
                     data: result,
                     duration,
-                    tokens: Math.floor(Math.random() * 150) + 200,
+                    tokens: tokensVal,
                     provider: providerSetting ? providerSetting.name : "Simulated Local Core",
                     model: providerSetting ? providerSetting.defaultModel : "Sovereign-Llama3-8B"
                 };
             }
 
-            const mergedPrompt = `[STAGE]: ${stageId}\n[INPUT DATA]:\n${JSON.stringify(inputData, null, 2)}\n\nIMPORTANT: Return ONLY a raw structured JSON object matching the contract parameters. Do not wrap in markdown tags if possible.`;
+            let customStageInstructions = "";
+            if (stageId === "document-intelligence") {
+                customStageInstructions = "\n\nCRITICAL DIRECTIVE: If the uploadedFiles have `extractedText` properties, analyze those contents to discover the actual Project Name, Client Name, Site Address, and Quote Number. Prioritize these real details from the file content over pre-filled form input fields or default values.";
+            }
+            const mergedPrompt = `[STAGE]: ${stageId}\n[INPUT DATA]:\n${JSON.stringify(inputData, null, 2)}${customStageInstructions}\n\nIMPORTANT: Return ONLY a raw structured JSON object matching the contract parameters. Do not wrap in markdown tags if possible.`;
 
             try {
+                // Initial AI Debug Console update for Live LLM request
+                const filesWithText = (inputData.uploadedFiles || []).filter(f => f.extractedText);
+                const textDisplay = filesWithText.length > 0
+                    ? filesWithText.map(f => `--- ${f.name} ---\n${f.extractedText.slice(0, 500)}...`).join("\n\n")
+                    : "No extracted text found on uploaded files. (Default simulated metadata is utilized).";
+
+                if (typeof updateAIDebugConsole === 'function') {
+                    updateAIDebugConsole({
+                        extractedText: textDisplay,
+                        model: providerSetting.defaultModel,
+                        endpoint: "Connecting...",
+                        httpStatus: "Awaiting Handshake...",
+                        tokens: "0 tok",
+                        executionTime: "0 ms",
+                        prompt: systemPrompt + "\n\n" + mergedPrompt,
+                        rawResponse: "Awaiting response stream...",
+                        parsedJson: "Awaiting validation...",
+                        errors: "No errors logged."
+                    });
+                }
+
                 let endpoint = "";
                 let headers = { "Content-Type": "application/json" };
                 let body = {};
@@ -343,12 +426,26 @@ window.BQAIPipeline = {
                 const cleanedJSON = this.cleanJSONResponse(rawText);
                 const parsed = JSON.parse(cleanedJSON);
                 const duration = Date.now() - startTime;
+                const tokensVal = jsonRes.usage ? jsonRes.usage.total_tokens : 500;
+
+                // Update Debug Console on successful Fetch
+                if (typeof updateAIDebugConsole === 'function') {
+                    updateAIDebugConsole({
+                        endpoint: endpoint,
+                        httpStatus: `${res.status} ${res.statusText || 'OK'}`,
+                        tokens: `${tokensVal} tok`,
+                        executionTime: `${duration} ms`,
+                        rawResponse: rawText,
+                        parsedJson: parsed,
+                        errors: "No errors logged."
+                    });
+                }
 
                 return {
                     success: true,
                     data: parsed,
                     duration,
-                    tokens: jsonRes.usage ? jsonRes.usage.total_tokens : 500,
+                    tokens: tokensVal,
                     provider: providerSetting.name,
                     model: providerSetting.defaultModel
                 };
@@ -357,6 +454,20 @@ window.BQAIPipeline = {
                 console.warn(`AIRunner Exec Failure on stage "${stageId}", defaulting to simulator. Reason: ${err.message}`);
                 const result = this.generateSimulatedOutput(stageId, inputData);
                 const duration = Date.now() - startTime;
+
+                // Update Debug Console on Failure / Fallback
+                if (typeof updateAIDebugConsole === 'function') {
+                    updateAIDebugConsole({
+                        endpoint: endpoint || "Failed API Endpoint",
+                        httpStatus: "Failed (Falling back to Simulation)",
+                        tokens: "300 tok",
+                        executionTime: `${duration} ms`,
+                        rawResponse: JSON.stringify(result, null, 2),
+                        parsedJson: result,
+                        errors: `API Error: ${err.message}`
+                    });
+                }
+
                 return {
                     success: true,
                     simulatedFallback: true,

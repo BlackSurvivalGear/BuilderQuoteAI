@@ -1128,6 +1128,38 @@ function classifyTenderFile(file) {
     };
 }
 
+// Asynchronous text extractor for PDF/TXT files
+async function extractTextFromFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') {
+        try {
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let text = "";
+                const maxPages = Math.min(pdf.numPages, 5); // Read first 5 pages for metadata and info
+                for (let i = 1; i <= maxPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    const strings = content.items.map(item => item.str);
+                    text += strings.join(" ") + "\n";
+                }
+                return text;
+            }
+        } catch (err) {
+            console.error("PDF.js Extraction Error:", err);
+        }
+    } else if (ext === 'txt') {
+        try {
+            return await file.text();
+        } catch (err) {
+            console.error("Text File Read Error:", err);
+        }
+    }
+    return "";
+}
+
 // Ingest files with interactive step-by-step progress loaders
 function ingestFilesWithProgress(files) {
     const uploadZone = document.getElementById('workspace-upload-zone');
@@ -1150,32 +1182,47 @@ function ingestFilesWithProgress(files) {
 
     let currentStepIdx = 0;
 
-    function renderProgressStep() {
+    async function renderProgressStep() {
         if (currentStepIdx >= steps.length) {
             // Restore upload zone
             uploadZone.innerHTML = originalHTML;
             uploadZone.style.pointerEvents = 'auto';
 
-            // Add files to state
+            // Add files to state asynchronously with parallel text extraction
+            const filePromises = [];
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 if (uploadedFiles.some(f => f.name === file.name)) continue;
 
                 const docDetails = classifyTenderFile(file);
 
-                uploadedFiles.push({
-                    id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-                    name: file.name,
-                    size: file.size,
-                    formattedSize: formatBytes(file.size),
-                    type: docDetails.type,
-                    pages: docDetails.pages,
-                    processingStatus: 'Analysis Complete',
-                    confidenceScore: docDetails.confidence,
-                    classification: docDetails.classification,
-                    revision: docDetails.revision,
-                    drawingNumber: docDetails.drawingNumber
-                });
+                filePromises.push((async () => {
+                    let extractedText = "";
+                    try {
+                        extractedText = await extractTextFromFile(file);
+                    } catch (e) {
+                        console.error("Extraction error:", e);
+                    }
+                    return {
+                        id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5) + '-' + i,
+                        name: file.name,
+                        size: file.size,
+                        formattedSize: formatBytes(file.size),
+                        type: docDetails.type,
+                        pages: docDetails.pages,
+                        processingStatus: 'Analysis Complete',
+                        confidenceScore: docDetails.confidence,
+                        classification: docDetails.classification,
+                        revision: docDetails.revision,
+                        drawingNumber: docDetails.drawingNumber,
+                        extractedText: extractedText
+                    };
+                })());
+            }
+
+            if (filePromises.length > 0) {
+                const processed = await Promise.all(filePromises);
+                uploadedFiles.push(...processed);
             }
 
             showToast('Files Processed', `Loaded ${files.length} project document(s). Pre-parsing structures...`);
@@ -1459,13 +1506,19 @@ function replaceUploadedFile(id) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.dwg';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         const index = uploadedFiles.findIndex(f => f.id === fileToReplaceId);
         if (index !== -1) {
             const docDetails = classifyTenderFile(file);
+            let extractedText = "";
+            try {
+                extractedText = await extractTextFromFile(file);
+            } catch (err) {
+                console.error(err);
+            }
             uploadedFiles[index] = {
                 id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
                 name: file.name,
@@ -1477,7 +1530,8 @@ function replaceUploadedFile(id) {
                 confidenceScore: docDetails.confidence,
                 classification: docDetails.classification,
                 revision: docDetails.revision,
-                drawingNumber: docDetails.drawingNumber
+                drawingNumber: docDetails.drawingNumber,
+                extractedText: extractedText
             };
             showToast('File Replaced', `Successfully replaced with ${file.name}`);
             renderUploadedFilesList();
@@ -1496,9 +1550,9 @@ function loadSampleProjectDescription() {
         desc.value = `Tender specifications for Mayfair duplex residential refurb:\n- Ground Floor: Demolition of internal structural masonry partitions, supply and installation of steel universal columns (203x203x46 UC).\n- First Floor: Install structural stud partition walls, skim coat plaster, double insulated plasterboards.\n- Electrical sub-circuits: 12 LED downlights, 6 double sockets, regional utility certificate audit.\n- Flooring: Underfloor insulation, dry screed flooring base, engineered premium Oak timber floorboards throughout.`;
 
         uploadedFiles = [
-            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'drawing', pages: 8, processingStatus: 'Analysis Complete', confidenceScore: 98, classification: "Architectural Drawings", revision: "Rev B", drawingNumber: "A101" },
-            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'spec', pages: 4, processingStatus: 'Analysis Complete', confidenceScore: 95, classification: "Specifications", revision: "Rev A", drawingNumber: "" },
-            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'report', pages: 1, processingStatus: 'Analysis Complete', confidenceScore: 92, classification: "Reports", revision: "Rev A", drawingNumber: "" }
+            { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'drawing', pages: 8, processingStatus: 'Analysis Complete', confidenceScore: 98, classification: "Architectural Drawings", revision: "Rev B", drawingNumber: "A101", extractedText: "Project Name: Mayfair Duplex Refurbishment. Client Name: Arthur Henderson. Site Address: 12 Mayfair Gardens, London. Quote Number: BQ-2024-216." },
+            { id: 'f-2', name: 'structural_steel_specifications.pdf', size: 4589200, formattedSize: '4.38 MB', type: 'spec', pages: 4, processingStatus: 'Analysis Complete', confidenceScore: 95, classification: "Specifications", revision: "Rev A", drawingNumber: "", extractedText: "Tender specifications for Mayfair duplex residential refurb. Supply and installation of steel universal columns (203x203x46 UC)." },
+            { id: 'f-3', name: 'tender_site_survey_photos.jpg', size: 3125400, formattedSize: '2.98 MB', type: 'report', pages: 1, processingStatus: 'Analysis Complete', confidenceScore: 92, classification: "Reports", revision: "Rev A", drawingNumber: "", extractedText: "Site photograph showing load bearing walls and access restrictions." }
         ];
         renderUploadedFilesList();
         if (typeof renderDocumentRegisterAndReadiness === 'function') {
@@ -3101,6 +3155,24 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
             // Dynamically boost confidence bars as stages complete
             const stgIdx = BQAIPipeline.STAGES.findIndex(st => st.id === stageId);
             animateConfidenceAtStep(stgIdx);
+
+            // Automatically populate Project Information panel from Document Intelligence
+            if (stageId === "document-intelligence" && state === "Completed" && data && data.project) {
+                const proj = data.project;
+                if (proj.projectName && proj.projectName !== "Unknown" && proj.projectName !== "Not Supplied") {
+                    document.getElementById('project-name').value = proj.projectName;
+                }
+                if (proj.clientName && proj.clientName !== "Not Supplied") {
+                    document.getElementById('project-client').value = proj.clientName;
+                }
+                if (proj.siteAddress && proj.siteAddress !== "Awaiting Information") {
+                    document.getElementById('project-site').value = proj.siteAddress;
+                }
+                if (proj.quoteNumber && proj.quoteNumber !== "Awaiting Information") {
+                    document.getElementById('project-quote-no').value = proj.quoteNumber;
+                }
+                saveWorkspaceToLocalStorage();
+            }
         },
         // Progress text callback
         (msgText) => {
