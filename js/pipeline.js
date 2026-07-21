@@ -402,17 +402,43 @@ window.BQAIPipeline = {
                     throw new Error(`Provider ${providerSetting.id} not yet supported in direct workflow execution.`);
                 }
 
+                const requestBodyStr = JSON.stringify(body);
+                const requestBodySize = requestBodyStr.length;
+
+                // Log request details
+                console.log("=================== LIVE AI REQUEST INITIATED ===================");
+                console.log(`Request URL: ${endpoint}`);
+                console.log(`HTTP Method: POST`);
+                console.log(`Model: ${providerSetting.defaultModel}`);
+                console.log(`Request Body Size: ${requestBodySize} bytes`);
+                console.log(`Request Body:`, body);
+                console.log("=================================================================");
+
                 const res = await fetch(endpoint, {
                     method: "POST",
                     headers,
-                    body: JSON.stringify(body)
+                    body: requestBodyStr
                 });
 
+                console.log("=================== LIVE AI RESPONSE RECEIVED ===================");
+                console.log(`HTTP Status Code: ${res.status} ${res.statusText || ""}`);
+
                 if (!res.ok) {
-                    throw new Error(`Handshake failed: HTTP status ${res.status}`);
+                    const errorText = await res.text();
+                    console.error(`HTTP Error Response Body:`, errorText);
+                    console.log("==================================================================");
+                    throw new Error(`Handshake failed: HTTP status ${res.status}. Response: ${errorText}`);
                 }
 
                 const jsonRes = await res.json();
+
+                // Redact API key / auth in any potential logs of response
+                let responseLogStr = JSON.stringify(jsonRes, null, 2);
+                responseLogStr = responseLogStr.replace(/Bearer sk-[a-zA-Z0-9-]{4,}/g, "Bearer sk-...[REDACTED]");
+                responseLogStr = responseLogStr.replace(/key=[a-zA-Z0-9-]{4,}/g, "key=...[REDACTED]");
+                console.log(`Full Response Body:`, responseLogStr);
+                console.log("==================================================================");
+
                 let rawText = "";
 
                 if (providerSetting.id === "openai" || providerSetting.id === "xai") {
@@ -451,32 +477,26 @@ window.BQAIPipeline = {
                 };
 
             } catch (err) {
-                console.warn(`AIRunner Exec Failure on stage "${stageId}", defaulting to simulator. Reason: ${err.message}`);
-                const result = this.generateSimulatedOutput(stageId, inputData);
-                const duration = Date.now() - startTime;
+                console.error("=================== LIVE AI REQUEST FAILED ===================");
+                console.error(`Error during execute for stage "${stageId}":`, err.message);
+                console.error(err);
+                console.error("==============================================================");
 
-                // Update Debug Console on Failure / Fallback
+                // Update Debug Console on Failure
                 if (typeof updateAIDebugConsole === 'function') {
                     updateAIDebugConsole({
                         endpoint: endpoint || "Failed API Endpoint",
-                        httpStatus: "Failed (Falling back to Simulation)",
-                        tokens: "300 tok",
-                        executionTime: `${duration} ms`,
-                        rawResponse: JSON.stringify(result, null, 2),
-                        parsedJson: result,
+                        httpStatus: "Failed (No Fallback in Production Mode)",
+                        tokens: "0 tok",
+                        executionTime: `${Date.now() - startTime} ms`,
+                        rawResponse: `API Error: ${err.message}`,
+                        parsedJson: "None - Request Failed",
                         errors: `API Error: ${err.message}`
                     });
                 }
 
-                return {
-                    success: true,
-                    simulatedFallback: true,
-                    data: result,
-                    duration,
-                    tokens: 300,
-                    provider: "Simulated Local Core",
-                    model: "Sovereign-Llama3-8B"
-                };
+                // In Production/Live mode, we MUST propagate the error and NOT fallback to simulation.
+                throw err;
             }
         },
 
