@@ -204,4 +204,45 @@ test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
         await expect(outputWrapper).toContainText('No architectural drawings supplied.');
     });
 
+    test('should update view and handle routing dynamically', async ({ page }) => {
+        // Go to home
+        await page.goto('http://localhost:3000/');
+        await expect(page.locator('#landing-page-wrapper')).toBeVisible();
+        await expect(page.locator('#ai-workspace-section')).toBeHidden();
+
+        // Simulate navigation to /workspace
+        await page.evaluate(() => {
+            history.pushState(null, '', '/workspace');
+            handleRouting();
+        });
+        await expect(page.locator('#ai-workspace-section')).toBeVisible();
+        await expect(page.locator('#landing-page-wrapper')).toBeHidden();
+
+        // Simulate navigation to /boq
+        await page.evaluate(() => {
+            history.pushState(null, '', '/boq');
+            handleRouting();
+        });
+        await expect(page.locator('#ai-workspace-section')).toBeVisible();
+        await expect(page.locator('#landing-page-wrapper')).toBeHidden();
+        await expect(page.locator('#workspace-tab-boq')).toBeVisible();
+
+        // Simulate navigation to /estimates
+        await page.evaluate(() => {
+            history.pushState(null, '', '/estimates');
+            handleRouting();
+        });
+        await expect(page.locator('#ai-workspace-section')).toBeVisible();
+        await expect(page.locator('#landing-page-wrapper')).toBeHidden();
+        await expect(page.locator('#workspace-tab-boq')).toBeVisible();
+
+        // Simulate back to /
+        await page.evaluate(() => {
+            history.pushState(null, '', '/');
+            handleRouting();
+        });
+        await expect(page.locator('#landing-page-wrapper')).toBeVisible();
+        await expect(page.locator('#ai-workspace-section')).toBeHidden();
+    });
+
 });
