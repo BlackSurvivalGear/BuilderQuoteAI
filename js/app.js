@@ -128,6 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Client-side Routing Initial Trigger & Popstate registration
+    handleRouting();
+    window.addEventListener('popstate', handleRouting);
+
 });
 
 /* Initialize Lucide icons helper */
@@ -313,9 +317,41 @@ const defaultProviders = [
     { id: 'ollama', name: 'Ollama (Local)', logo: 'laptop', enabled: false, apiKey: 'http://localhost:11434', defaultModel: 'llama3', models: ['llama3', 'mistral', 'codellama', 'qwen2.5'] }
 ];
 
+// Helper to extract the base path prefix (e.g. for GitHub Pages /repository-name/)
+function getBasePath() {
+    let path = window.location.pathname;
+    if (path.endsWith('/workspace')) {
+        path = path.slice(0, -10);
+    } else if (path.endsWith('/boq')) {
+        path = path.slice(0, -4);
+    } else if (path.endsWith('/estimates')) {
+        path = path.slice(0, -10);
+    } else if (path.endsWith('/index.html')) {
+        path = path.slice(0, -11);
+    }
+    if (path.endsWith('/')) {
+        path = path.slice(0, -1);
+    }
+    return path;
+}
+
+// Client-side Routing logic
+function handleRouting() {
+    const path = window.location.pathname;
+    if (path.endsWith('/workspace')) {
+        toggleView(true, false);
+    } else if (path.endsWith('/boq') || path.endsWith('/estimates')) {
+        toggleView(true, false);
+        switchWorkspaceTab('boq', false);
+    } else {
+        // Default to landing page
+        toggleView(false, false);
+    }
+}
+
 // Switch views between Landing and AI Workspace
-function toggleView(showWorkspace) {
-    const landingSections = document.getElementById('landing-sections-container');
+function toggleView(showWorkspace, updateHistory = true) {
+    const landingSections = document.getElementById('landing-page-wrapper');
     const workspaceSection = document.getElementById('ai-workspace-section');
     const heroBtn = document.getElementById('nav-home-btn');
 
@@ -329,12 +365,21 @@ function toggleView(showWorkspace) {
         showToast('Workspace Active', 'Welcome to the sovereign AI Quantity Surveyor platform.');
         updateProjectReviewPanelStats();
         initLucide();
+
+        if (updateHistory) {
+            const basePath = getBasePath();
+            history.pushState({ view: 'workspace' }, '', basePath + '/workspace');
+        }
     } else {
         if (landingSections) landingSections.classList.remove('hidden');
         if (workspaceSection) workspaceSection.classList.add('hidden');
         if (heroBtn) {
             heroBtn.classList.add('text-brand-gold', 'font-semibold');
             heroBtn.classList.remove('text-gray-300');
+        }
+        if (updateHistory) {
+            const basePath = getBasePath();
+            history.pushState({ view: 'landing' }, '', basePath + '/');
         }
     }
 }
@@ -371,7 +416,7 @@ function clearPipelineLogs() {
 }
 
 // Switch between workspace sub-tabs
-function switchWorkspaceTab(tab) {
+function switchWorkspaceTab(tab, updateHistory = true) {
     activeWorkspaceTab = tab;
     const tabBOQ = document.getElementById('workspace-tab-boq');
     const tabSettings = document.getElementById('workspace-tab-ai-settings');
@@ -393,14 +438,26 @@ function switchWorkspaceTab(tab) {
         if (tabBOQ) tabBOQ.classList.remove('hidden');
         if (btnBOQ) btnBOQ.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
         updateProjectReviewPanelStats();
+        if (updateHistory) {
+            const basePath = getBasePath();
+            history.pushState({ view: 'boq' }, '', basePath + '/boq');
+        }
     } else if (tab === 'ai-settings') {
         if (tabSettings) tabSettings.classList.remove('hidden');
         if (btnSettings) btnSettings.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
         renderAIProviders();
+        if (updateHistory) {
+            const basePath = getBasePath();
+            history.pushState({ view: 'ai-settings' }, '', basePath + '/workspace');
+        }
     } else if (tab === 'dev-logs') {
         if (tabDevLogs) tabDevLogs.classList.remove('hidden');
         if (btnDevLogs) btnDevLogs.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
         renderPipelineDeveloperLogs();
+        if (updateHistory) {
+            const basePath = getBasePath();
+            history.pushState({ view: 'dev-logs' }, '', basePath + '/workspace');
+        }
     }
     initLucide();
 }
