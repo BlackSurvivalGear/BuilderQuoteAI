@@ -560,7 +560,7 @@
                                 AI Takeoff & Progress Panel
                             </h3>
 
-                            <!-- Animated Checklist (12-stage official pipeline monitor) -->
+                            <!-- Animated Checklist (14-stage official pipeline monitor) -->
                             <div id="ai-progress-checklist" class="space-y-1.5 text-xs max-h-[300px] overflow-y-auto pr-1">
                                 <!-- Replaced dynamically, but structured base container here -->
                                 <div id="stage-upload-documents" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
@@ -570,80 +570,94 @@
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
+                                <div id="stage-ocr" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">2. OCR <span id="step-1" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-page-processing" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">3. Page Processing <span id="step-2" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-document-classification" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">4. Document Classification <span id="step-3" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
                                 <div id="stage-document-intelligence" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">2. Document Intelligence</span>
+                                        <span class="font-medium">5. Metadata Extraction <span id="step-4" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
                                 <div id="stage-drawing-interpreter" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">3. Drawing Interpreter</span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-quantity-surveyor" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">4. Quantity Surveyor</span>
+                                        <span class="font-medium">6. Drawing Detection <span id="step-5" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
                                 <div id="stage-boq-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">5. BOQ Generator</span>
+                                        <span class="font-medium">7. BOQ Extraction <span id="step-6" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="stage-regional-pricing" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                <div id="stage-quantity-surveyor" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">6. Regional Pricing</span>
+                                        <span class="font-medium">8. Quantity Take-off <span id="step-7" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-material-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">9. Material Analysis <span id="step-8" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-labour-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">10. Labour Analysis <span id="step-9" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-plant-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">11. Plant Analysis <span id="step-10" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
                                 <div id="stage-cost-estimator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">7. Cost Estimator</span>
+                                        <span class="font-medium">12. Cost Estimation <span id="step-11" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="stage-risk-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                <div id="stage-validation" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">8. Risk Analysis</span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-clarification-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">9. Clarification Gen</span>
+                                        <span class="font-medium">13. Validation <span id="step-12" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
                                 <div id="stage-quotation-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">10. Quotation Generator</span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-client-summary" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">11. Client Summary</span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-export-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">12. Export Generator</span>
+                                        <span class="font-medium">14. Final Estimate <span id="step-13" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
