@@ -2991,11 +2991,20 @@ function renderPipelineDeveloperLogs() {
     }
 
     tbody.innerHTML = '';
-    logs.forEach(log => {
+    logs.forEach((log, index) => {
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-brand-glass-hover border-b border-brand-glass-border/30 text-gray-300";
+        tr.className = "hover:bg-brand-glass-hover border-b border-brand-glass-border/30 text-gray-300 cursor-pointer";
+        tr.onclick = () => {
+            const detailRow = document.getElementById(`log-detail-${index}`);
+            if (detailRow) {
+                detailRow.classList.toggle('hidden');
+            }
+        };
         tr.innerHTML = `
-            <td class="p-3 font-semibold text-white">${log.stageName}</td>
+            <td class="p-3 font-semibold text-white flex items-center gap-2">
+                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-brand-gold shrink-0"></i>
+                ${log.stageName}
+            </td>
             <td class="p-3 font-mono text-[10px]">${log.startTime} - ${log.finishTime}</td>
             <td class="p-3 font-mono text-brand-gold font-bold">${log.duration}</td>
             <td class="p-3 text-[11px]"><span class="text-white">${log.provider}</span> / <span class="text-gray-400 font-mono">${log.model}</span></td>
@@ -3008,7 +3017,48 @@ function renderPipelineDeveloperLogs() {
             <td class="p-3 text-gray-400 font-mono text-[11px] truncate max-w-[140px]" title="${log.validationResult}">${log.validationResult}</td>
         `;
         tbody.appendChild(tr);
+
+        // Enriched Detail Row (Hidden by default)
+        const trDetail = document.createElement('tr');
+        trDetail.id = `log-detail-${index}`;
+        trDetail.className = "bg-brand-matte/50 border-b border-brand-glass-border/30 hidden";
+        trDetail.innerHTML = `
+            <td colspan="7" class="p-4 space-y-3 text-xs leading-relaxed font-mono">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-gray-400">
+                    <div>
+                        <span class="text-gray-500 block uppercase font-bold text-[9px]">Retries</span>
+                        <span class="text-white">${log.retryCount || 0}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block uppercase font-bold text-[9px]">Payload Size</span>
+                        <span class="text-brand-gold">${log.payloadSize || 1200} bytes</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block uppercase font-bold text-[9px]">Warnings</span>
+                        <span class="text-yellow-400">${log.warnings || 'None'}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block uppercase font-bold text-[9px]">Errors</span>
+                        <span class="text-red-400">${log.errors || 'None'}</span>
+                    </div>
+                </div>
+                ${log.exceptionMessage ? `
+                <div class="border-t border-brand-glass-border/10 pt-2">
+                    <span class="text-gray-500 block uppercase font-bold text-[9px] mb-1">Exception Message</span>
+                    <pre class="bg-brand-matte/90 p-2.5 rounded border border-red-500/20 text-red-400 overflow-x-auto whitespace-pre-wrap max-h-[100px]">${log.exceptionMessage}</pre>
+                </div>
+                ` : ''}
+                ${log.stackTrace ? `
+                <div class="border-t border-brand-glass-border/10 pt-2">
+                    <span class="text-gray-500 block uppercase font-bold text-[9px] mb-1">Stack Trace</span>
+                    <pre class="bg-brand-matte/90 p-2.5 rounded border border-brand-glass-border/40 text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-[150px]">${log.stackTrace}</pre>
+                </div>
+                ` : ''}
+            </td>
+        `;
+        tbody.appendChild(trDetail);
     });
+    initLucide();
 }
 
 // Synchronise completed stages visualization
@@ -3029,6 +3079,16 @@ function syncPipelineMonitorUI(stageId, state, data = null) {
         if (icon) {
             icon.setAttribute("data-lucide", "loader-2");
             icon.className = "w-3.5 h-3.5 shrink-0 text-brand-gold animate-spin status-icon";
+        }
+    } else if (state === "Retrying") {
+        item.className = "flex items-center justify-between p-1 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-500";
+        if (badge) {
+            badge.textContent = `⟳ RETRYING (${data ? data.retryCount : '1'}/${data ? data.maxRetries : '3'})`;
+            badge.className = "status-badge text-[9px] font-mono tracking-wider font-bold text-yellow-500 animate-pulse";
+        }
+        if (icon) {
+            icon.setAttribute("data-lucide", "loader-2");
+            icon.className = "w-3.5 h-3.5 shrink-0 text-yellow-500 animate-spin status-icon";
         }
     } else if (state === "Completed") {
         item.className = "flex items-center justify-between p-1 rounded bg-green-500/5 hover:bg-brand-glass-hover text-green-400 cursor-pointer transition-colors";
@@ -3429,9 +3489,13 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
                         <p class="text-xs text-red-400">Reason: ${failedStageReason}</p>
                     </div>
                     <div class="pt-2 flex flex-wrap justify-center gap-3">
-                        <button onclick="triggerStageRetry('${failedStageId}')" class="px-4 py-2 bg-brand-gold text-brand-matte hover:bg-brand-gold-hover font-bold text-xs rounded-lg transition-all flex items-center gap-1.5">
+                        <button onclick="triggerPipelineResume()" class="px-4 py-2 bg-brand-gold text-brand-matte hover:bg-brand-gold-hover font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 shadow-gold-glow-sm">
                             <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                            Retry Stage
+                            Resume Pipeline
+                        </button>
+                        <button onclick="triggerStageRetry('${failedStageId}')" class="px-4 py-2 bg-brand-matte border border-brand-glass-border hover:bg-brand-glass-hover text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5">
+                            <i data-lucide="redo-2" class="w-3.5 h-3.5"></i>
+                            Retry Failed Stage
                         </button>
                         <button onclick="triggerPipelineRestart()" class="px-4 py-2 bg-brand-matte border border-brand-glass-border hover:bg-brand-glass-hover text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5">
                             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
@@ -3457,6 +3521,32 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
 // Map the old triggerOneClickQuote to the new gorgeous sequential pipeline runner!
 function triggerOneClickQuote() {
     runBQAIPipelineOrchestrator();
+}
+
+function triggerPipelineResume() {
+    showToast("Resuming Pipeline", "Resuming pipeline from the first failed/incomplete stage...");
+
+    // Find the first failed or incomplete stage
+    const stages = window.BQAIPipeline ? BQAIPipeline.STAGES : [];
+    const savedStages = window.BQAIPipeline ? BQAIPipeline.Persistence.loadStages() : {};
+
+    let resumeStageId = null;
+    for (const stage of stages) {
+        const output = savedStages[stage.id];
+        // If stage output doesn't exist, is marked as failed, or has a failure reason/status
+        if (!output || output.status === "failed") {
+            resumeStageId = stage.id;
+            break;
+        }
+    }
+
+    if (!resumeStageId) {
+        showToast("Pipeline Complete", "All stages are already completed.");
+        return;
+    }
+
+    showToast("Resuming Stage", `Resuming pipeline from: ${resumeStageId}`);
+    runBQAIPipelineOrchestrator(resumeStageId);
 }
 
 function triggerStageRetry(stageId) {
