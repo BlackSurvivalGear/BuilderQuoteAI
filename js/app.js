@@ -326,6 +326,8 @@ function getBasePath() {
         path = path.slice(0, -4);
     } else if (path.endsWith('/estimates')) {
         path = path.slice(0, -10);
+    } else if (path.endsWith('/construction-law')) {
+        path = path.slice(0, -17);
     } else if (path.endsWith('/index.html')) {
         path = path.slice(0, -11);
     }
@@ -343,6 +345,9 @@ function handleRouting() {
     } else if (path.endsWith('/boq') || path.endsWith('/estimates')) {
         toggleView(true, false);
         switchWorkspaceTab('boq', false);
+    } else if (path.endsWith('/construction-law')) {
+        toggleView(true, false);
+        switchWorkspaceTab('construction-law', false);
     } else {
         // Default to landing page
         toggleView(false, false);
@@ -419,18 +424,22 @@ function clearPipelineLogs() {
 function switchWorkspaceTab(tab, updateHistory = true) {
     activeWorkspaceTab = tab;
     const tabBOQ = document.getElementById('workspace-tab-boq');
+    const tabLaw = document.getElementById('workspace-tab-construction-law');
     const tabSettings = document.getElementById('workspace-tab-ai-settings');
     const tabDevLogs = document.getElementById('workspace-tab-dev-logs');
 
     const btnBOQ = document.getElementById('tab-btn-boq');
+    const btnLaw = document.getElementById('tab-btn-construction-law');
     const btnSettings = document.getElementById('tab-btn-ai-settings');
     const btnDevLogs = document.getElementById('tab-btn-dev-logs');
 
     if (tabBOQ) tabBOQ.classList.add('hidden');
+    if (tabLaw) tabLaw.classList.add('hidden');
     if (tabSettings) tabSettings.classList.add('hidden');
     if (tabDevLogs) tabDevLogs.classList.add('hidden');
 
     if (btnBOQ) btnBOQ.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
+    if (btnLaw) btnLaw.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
     if (btnSettings) btnSettings.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
     if (btnDevLogs) btnDevLogs.className = "px-3 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
 
@@ -441,6 +450,13 @@ function switchWorkspaceTab(tab, updateHistory = true) {
         if (updateHistory) {
             const basePath = getBasePath();
             history.pushState({ view: 'boq' }, '', basePath + '/boq');
+        }
+    } else if (tab === 'construction-law') {
+        if (tabLaw) tabLaw.classList.remove('hidden');
+        if (btnLaw) btnLaw.className = "px-3 py-1.5 text-xs font-bold rounded-md bg-brand-gold text-brand-matte transition-all flex items-center gap-1.5";
+        if (updateHistory) {
+            const basePath = getBasePath();
+            history.pushState({ view: 'construction-law' }, '', basePath + '/construction-law');
         }
     } else if (tab === 'ai-settings') {
         if (tabSettings) tabSettings.classList.remove('hidden');
@@ -4033,4 +4049,334 @@ function triggerDemoAnimation() {
             startSurveyScanning();
         }, 800);
     }
+}
+
+// Filter Construction Law Cards dynamically
+function filterLawCards(query) {
+    const cards = document.querySelectorAll('.law-card');
+    const q = query.toLowerCase().trim();
+    cards.forEach(card => {
+        const title = card.getAttribute('data-title') || '';
+        if (!q || title.includes(q)) {
+            card.style.display = 'flex';
+            card.style.opacity = '1';
+            card.style.transform = 'scale(1)';
+        } else {
+            card.style.display = 'none';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.95)';
+        }
+    });
+}
+
+// Set Prompt Text in Construction Law AI Panel
+function setLawPrompt(promptText) {
+    const textarea = document.getElementById('law-ai-prompt');
+    if (textarea) {
+        textarea.value = promptText;
+        textarea.focus();
+    }
+}
+
+// Ask Construction Law AI
+function askLawAI() {
+    const promptInput = document.getElementById('law-ai-prompt');
+    const responseBox = document.getElementById('law-ai-response');
+    if (!promptInput || !responseBox) return;
+
+    const query = promptInput.value.trim();
+    if (!query) {
+        showToast("Empty Query", "Please select or write a legal prompt query.");
+        return;
+    }
+
+    // Show Loader State
+    responseBox.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 text-center text-brand-gold space-y-3">
+            <i data-lucide="scale" class="w-8 h-8 animate-spin text-brand-gold"></i>
+            <p class="font-semibold text-xs text-white">Consulting Sovereign AI Legal Engine...</p>
+            <p class="text-[10px] text-gray-500 max-w-xs">Analyzing UK precedents, Housing Grants Act, JCT/NEC statutory guidelines...</p>
+        </div>
+    `;
+    initLucide();
+
+    setTimeout(() => {
+        // Generate a beautiful, highly detailed simulated legal response matching the prompt
+        let title = "Sovereign Law AI Counsel";
+        let summary = "The following advice is generated by the BuilderQuoteAI Sovereign legal engine for guidance purposes.";
+        let points = [];
+        let riskLevel = "Medium Risk";
+        let riskColor = "text-yellow-400 bg-yellow-950/40 border-yellow-900";
+
+        if (query.toLowerCase().includes("pay less notice") || query.toLowerCase().includes("payment notice")) {
+            title = "Payment and Pay Less Notice Guidelines";
+            summary = "Under the Housing Grants, Construction and Regeneration Act 1996 (as amended), strict statutory timelines govern payment notices. If an employer intends to pay less than the notified sum, they must issue a Pay Less Notice within the contractually agreed period.";
+            points = [
+                "<strong>Payment Notice:</strong> Must be issued by the payer within 5 days of the payment due date, stating the sum considered due and the basis on which it is calculated.",
+                "<strong>Pay Less Notice:</strong> Must specify the sum considered to be due on the date the notice is given, and the basis on which that sum is calculated.",
+                "<strong>Statutory Timeline:</strong> Under JCT contracts, the Pay Less Notice must typically be served no later than 5 days before the final date for payment.",
+                "<strong>Consequences of Failure:</strong> If no Pay Less Notice is served, the payer is contractually obligated to pay the full amount stated in the Payment Notice (or application) by the final date."
+            ];
+            riskLevel = "High Risk (Critical Timelines)";
+            riskColor = "text-red-400 bg-red-950/40 border-red-900";
+        } else if (query.toLowerCase().includes("extension of time") || query.toLowerCase().includes("eot")) {
+            title = "Extension of Time (EOT) & Relevant Events";
+            summary = "An Extension of Time (EOT) relieves the contractor from liability for liquidated damages for period of delay caused by 'Relevant Events' or 'Compensation Events'.";
+            points = [
+                "<strong>Notice Requirement:</strong> Notice of delay must be given as soon as it becomes 'reasonably apparent' that the progress of the works is being, or is likely to be, delayed.",
+                "<strong>Causation:</strong> The contractor must demonstrate that the delay was caused by a Relevant Event (e.g., exceptionally adverse weather, variations, civil commotion) and affects the critical path.",
+                "<strong>Mitigation:</strong> The contractor has a strict duty to use constant best endeavours to prevent delay and mitigate its effects.",
+                "<strong>Assessment:</strong> The contract administrator should assess the EOT fairly, adding any granted time to the contract completion date."
+            ];
+            riskLevel = "Medium Risk (Evidentiary Burden)";
+            riskColor = "text-yellow-400 bg-yellow-950/40 border-yellow-900";
+        } else if (query.toLowerCase().includes("liquidated damages")) {
+            title = "Liquidated and Ascertained Damages (LADs)";
+            summary = "Liquidated damages are pre-estimated damages agreed upon at contract execution, payable if the contractor fails to complete the works by the completion date.";
+            points = [
+                "<strong>Enforceability:</strong> The sum must represent a genuine pre-estimate of loss. If deemed a penalty, the clause is void and unenforceable.",
+                "<strong>Condition Precedent:</strong> Before deducting LADs, the contract administrator must issue a Non-Completion Certificate (under JCT) and serve notice of intent to deduct.",
+                "<strong>EOT Correlation:</strong> Granting an EOT retrospectively reduces or eliminates LAD liability for that delayed period."
+            ];
+            riskLevel = "High Risk (Financial Deduction)";
+            riskColor = "text-red-400 bg-red-950/40 border-red-900";
+        } else if (query.toLowerCase().includes("nec")) {
+            title = "NEC Contract Structure and Philosophy";
+            summary = "The NEC suite promotes collaborative project management through early warnings, compensation events, and clear, plain-language provisions.";
+            points = [
+                "<strong>Early Warning Notices (EWN):</strong> Compulsory notifications by either party for any matter that could increase cost, delay completion, or impair performance.",
+                "<strong>Compensation Events (CE):</strong> Single integrated mechanism for assessing time and cost effects of variations or employer-risk events.",
+                "<strong>Time-Bar:</strong> Failure to notify a Compensation Event within 8 weeks of becoming aware may bar any claim for additional time or money under Clause 61.3."
+            ];
+            riskLevel = "Medium Risk (Strict Time-Bars)";
+            riskColor = "text-yellow-400 bg-yellow-950/40 border-yellow-900";
+        } else if (query.toLowerCase().includes("jct")) {
+            title = "JCT (Joint Contracts Tribunal) Framework";
+            summary = "JCT contracts represent traditional UK construction procurement methods, with clear allocation of risk and established administrative procedures.";
+            points = [
+                "<strong>Variations:</strong> Instructed changes to the scope of works must be valued according to contract valuation rules (similar work, pro-rata rates, or daywork).",
+                "<strong>Practical Completion:</strong> Achieved when the works are complete for all practical purposes and can be safely occupied. Triggers release of 50% retention.",
+                "<strong>Defects Liability:</strong> A rectification period (typically 12 months) during which the contractor must return to remedy any defects arising."
+            ];
+            riskLevel = "Low to Medium Risk";
+            riskColor = "text-blue-400 bg-blue-950/40 border-blue-900";
+        } else if (query.toLowerCase().includes("variation") || query.toLowerCase().includes("draft")) {
+            title = "Drafting and Instructing Variation Orders";
+            summary = "A Variation Order must be clearly instructed in writing by the authorized Contract Administrator or Architect to avoid disputes.";
+            points = [
+                "<strong>Written Instruction:</strong> Always confirm verbal instructions in writing within 7 days.",
+                "<strong>Itemized Valuation:</strong> Break down the variation into labor, material, and plant costs using contract rate rules.",
+                "<strong>Impact Assessment:</strong> State clearly whether the variation has an associated extension of time (EOT) impact."
+            ];
+            riskLevel = "Low Risk (Standard Administration)";
+            riskColor = "text-green-400 bg-green-950/40 border-green-900";
+        } else {
+            title = "Commercial Construction Law Inquiry";
+            summary = `Analysis generated for query: "${query}". Guidance is structured according to statutory UK Construction law.`;
+            points = [
+                "<strong>Commercial Best Practice:</strong> Ensure all instructions are recorded in writing with mutual signatures.",
+                "<strong>Record Keeping:</strong> Maintain daily site logs, weather recordings, and detailed photos of progress and delays.",
+                "<strong>Adjudication Right:</strong> Under the Housing Grants Act, any party to a construction contract has a statutory right to refer a dispute to Adjudication at any time."
+            ];
+            riskLevel = "General Guidance";
+            riskColor = "text-blue-400 bg-blue-950/40 border-blue-900";
+        }
+
+        // Render response nicely
+        responseBox.innerHTML = `
+            <div class="space-y-4 animate-fade-in">
+                <div class="flex items-center justify-between border-b border-brand-glass-border/30 pb-2">
+                    <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                        <i data-lucide="scale" class="w-4 h-4 text-brand-gold"></i>
+                        ${title}
+                    </span>
+                    <span class="text-[9px] px-2 py-0.5 rounded-md border font-mono ${riskColor}">${riskLevel}</span>
+                </div>
+                <p class="text-xs text-gray-300 leading-relaxed">${summary}</p>
+
+                <div class="space-y-2 pt-1">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Key Recommendations:</p>
+                    <ul class="space-y-2 pl-3 list-disc text-gray-400 text-xs">
+                        ${points.map(pt => `<li>${pt}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="pt-3 border-t border-brand-glass-border/30 flex items-center justify-between text-[10px] text-gray-500">
+                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Real-time analysis complete</span>
+                    <button onclick="copyToClipboard('${query}')" class="text-brand-gold hover:underline flex items-center gap-1">
+                        <i data-lucide="copy" class="w-3 h-3"></i> Copy Response
+                    </button>
+                </div>
+            </div>
+        `;
+        initLucide();
+    }, 1500);
+}
+
+// Open Construction Law Details Modal with custom rich content
+function openLawDetail(cardId) {
+    const modal = document.getElementById('law-detail-modal');
+    const title = document.getElementById('modal-law-title');
+    const subtitle = document.getElementById('modal-law-subtitle');
+    const body = document.getElementById('modal-law-body');
+    const iconContainer = document.getElementById('modal-law-icon-container');
+
+    if (!modal || !title || !subtitle || !body) return;
+
+    let contentHtml = "";
+    let headTitle = "";
+    let headSub = "";
+    let headIcon = "scale";
+
+    if (cardId === 'contracts') {
+        headTitle = "Construction Contracts JCT / NEC / FIDIC";
+        headSub = "Detailed guidance on procurement frameworks and contract choice.";
+        headIcon = "file-text";
+        contentHtml = `
+            <div class="space-y-4">
+                <p>Choosing the correct contract is essential for risk allocation, procurement timelines, and dispute prevention.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div class="bg-brand-matte/50 p-4 rounded-xl border border-brand-glass-border/40">
+                        <h4 class="font-bold text-brand-gold text-xs uppercase mb-1.5">JCT (Joint Contracts Tribunal)</h4>
+                        <p class="text-xs text-gray-400">Traditional, standard-risk UK standard forms. Highly familiar in the commercial market. Relies heavily on the Bill of Quantities and traditional valuation methods.</p>
+                    </div>
+                    <div class="bg-brand-matte/50 p-4 rounded-xl border border-brand-glass-border/40">
+                        <h4 class="font-bold text-brand-gold text-xs uppercase mb-1.5">NEC (New Engineering Contract)</h4>
+                        <p class="text-xs text-gray-400">Collaborative, progressive project management framework. Emphasizes early warning procedures and Compensation Events. Failure to notify delay triggers strict time-bars.</p>
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <h4 class="font-bold text-white text-xs mb-1.5">Key Contracting Guidance:</h4>
+                    <ul class="list-disc pl-4 space-y-1.5 text-xs text-gray-400">
+                        <li><strong>Standard of Care:</strong> Differentiate clearly between 'reasonable skill and care' and 'fitness for purpose' design duties.</li>
+                        <li><strong>Subcontracts:</strong> Ensure subcontracts are perfectly back-to-back with main contract conditions regarding payment terms and delay notifications.</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    } else if (cardId === 'payment') {
+        headTitle = "Payment Notices and Valuations";
+        headSub = "Statutory provisions under the Housing Grants Act.";
+        headIcon = "coins";
+        contentHtml = `
+            <div class="space-y-4">
+                <p>The UK construction industry operates under strict statutory payment rules designed to protect subcontractor cashflow.</p>
+                <div class="space-y-3">
+                    <div class="border-l-2 border-brand-gold pl-3 space-y-1">
+                        <p class="font-semibold text-white text-xs">The Payment Notice Rule</p>
+                        <p class="text-xs text-gray-400">The payer must issue a Payment Notice within 5 days of the due date. If they fail, the payee's application can become a 'default payment notice' which must be paid in full unless a Pay Less Notice is served.</p>
+                    </div>
+                    <div class="border-l-2 border-brand-gold pl-3 space-y-1">
+                        <p class="font-semibold text-white text-xs">Retention Procedures</p>
+                        <p class="text-xs text-gray-400">Standard retention is typically 3% to 5% of each interim valuation, half released at Practical Completion, and the remaining half upon expiration of the Rectification Period.</p>
+                    </div>
+                </div>
+                <div class="bg-brand-matte/30 p-3 rounded-lg border border-brand-glass-border flex items-center justify-between">
+                    <span class="text-xs text-gray-400 font-medium">Download Sample Payment Notice Template</span>
+                    <button onclick="downloadLawTemplate('payment-notice')" class="px-3 py-1.5 text-[10px] font-bold rounded bg-brand-gold text-brand-matte hover:bg-brand-gold-hover transition-all">Download PDF</button>
+                </div>
+            </div>
+        `;
+    } else if (cardId === 'claims') {
+        headTitle = "Claims, EOT & Commercial Disputes";
+        headSub = "Managing variations, delay, and loss & expense claims.";
+        headIcon = "scale";
+        contentHtml = `
+            <div class="space-y-4">
+                <p>Disputes in construction generally revolve around time (EOT) and money (Variations or Loss & Expense).</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-brand-matte/50 p-4 rounded-xl border border-brand-glass-border/40 space-y-2">
+                        <h4 class="font-bold text-white text-xs">Liquidated Damages (LADs)</h4>
+                        <p class="text-xs text-gray-400">Fixed sums agreed in advance to be deducted per day/week of delay. Must be a genuine pre-estimate of loss to be legally enforceable.</p>
+                    </div>
+                    <div class="bg-brand-matte/50 p-4 rounded-xl border border-brand-glass-border/40 space-y-2">
+                        <h4 class="font-bold text-white text-xs">Loss & Expense Claims</h4>
+                        <p class="text-xs text-gray-400">Claims for direct loss or expense incurred due to the regular progress of work being disrupted by employer actions.</p>
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <h4 class="font-bold text-white text-xs mb-1.5">Commercial Dispute Resolution Hierarchy:</h4>
+                    <p class="text-xs text-gray-400 leading-relaxed">Most disputes follow a sequence: negotiation, mediation, adjudication (a 28-day binding statutory fast-track process), and finally arbitration or litigation in the Technology and Construction Court (TCC).</p>
+                </div>
+            </div>
+        `;
+    } else if (cardId === 'templates') {
+        headTitle = "Legal Templates Library";
+        headSub = "Standard downloadable template letters and notices.";
+        headIcon = "folder-open";
+        contentHtml = `
+            <div class="space-y-4">
+                <p>Use these professionally structured templates to comply with contract administration and statutory rules.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-brand-matte/50 p-4 rounded-xl border border-brand-glass-border/40 flex flex-col justify-between h-32">
+                        <div>
+                            <h4 class="font-bold text-white text-xs">Pay Less Notice</h4>
+                            <p class="text-[11px] text-gray-400 mt-1">Serve notice to deduct from interim valuation due payments.</p>
+                        </div>
+                        <button onclick="downloadLawTemplate('pay-less')" class="w-full mt-2 py-1 text-[10px] font-bold rounded bg-brand-gold text-brand-matte hover:bg-brand-gold-hover transition-all">Download Template</button>
+                    </div>
+                    <div class="bg-brand-matte/50 p-4 rounded-xl border border-brand-glass-border/40 flex flex-col justify-between h-32">
+                        <div>
+                            <h4 class="font-bold text-white text-xs">Extension of Time Request</h4>
+                            <p class="text-[11px] text-gray-400 mt-1">Format letter notifying delay and claiming additional completion time.</p>
+                        </div>
+                        <button onclick="downloadLawTemplate('eot')" class="w-full mt-2 py-1 text-[10px] font-bold rounded bg-brand-gold text-brand-matte hover:bg-brand-gold-hover transition-all">Download Template</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        headTitle = "Construction Law Modules";
+        headSub = "Professional guide on modern construction law principles.";
+        headIcon = "scale";
+        contentHtml = `
+            <div class="space-y-4">
+                <p>This module provides integrated AI-powered insights, reference guidelines, and industry-standard procurement explanations tailored for Quantity Surveyors and Commercial Directors.</p>
+                <div class="p-4 bg-brand-gold-muted/10 border border-brand-gold-border/20 rounded-xl">
+                    <h4 class="font-bold text-brand-gold text-xs mb-1.5">Statutory Right of Adjudication</h4>
+                    <p class="text-xs text-gray-300">Under UK legislation, any party to a construction contract has a statutory, non-waivable right to refer disputes to fast-track adjudication at any time, with a binding decision rendered in 28 days.</p>
+                </div>
+                <div class="pt-2">
+                    <h4 class="font-bold text-white text-xs mb-1">Recommended Best Practice:</h4>
+                    <ul class="list-disc pl-4 space-y-1.5 text-xs text-gray-400">
+                        <li>Record every minor change as an Instructed Variation immediately.</li>
+                        <li>Maintain robust daily progress logs, site photographs, and weather reports to back up potential claims.</li>
+                        <li>Review contract payment schedules meticulously upon execution to ensure no notices are missed.</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+
+    title.innerText = headTitle;
+    subtitle.innerText = headSub;
+    body.innerHTML = contentHtml;
+
+    if (iconContainer) {
+        iconContainer.innerHTML = `<i data-lucide="${headIcon}" class="w-4 h-4"></i>`;
+    }
+
+    modal.classList.remove('hidden');
+    initLucide();
+}
+
+// Close Law Detail Modal
+function closeLawDetailModal() {
+    const modal = document.getElementById('law-detail-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Simulated Download Law Template
+function downloadLawTemplate(templateType) {
+    showToast("Preparing Template", `Generating downloadable standard word template for '${templateType}'...`);
+    setTimeout(() => {
+        showToast("Download Complete", `${templateType.toUpperCase()} template letter has been successfully saved to your downloads folder.`);
+    }, 1200);
+}
+
+// Copy prompt text helper
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast("Copied to Clipboard", "AI Response has been successfully copied to your clipboard.");
+    });
 }

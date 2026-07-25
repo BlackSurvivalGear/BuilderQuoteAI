@@ -245,4 +245,78 @@ test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
         await expect(page.locator('#ai-workspace-section')).toBeHidden();
     });
 
+    test('should load Construction Law page and verify interaction and routing', async ({ page }) => {
+        // Navigate to Workspace
+        await page.locator('#nav-workspace-btn').click();
+
+        // Verify Construction Law tab button exists
+        const tabBtn = page.locator('#tab-btn-construction-law');
+        await expect(tabBtn).toBeVisible();
+        await expect(tabBtn).toContainText('Construction Law');
+
+        // Click Construction Law tab
+        await tabBtn.click();
+
+        // Verify Construction Law panel is visible and contains correct text elements
+        const lawTab = page.locator('#workspace-tab-construction-law');
+        await expect(lawTab).toBeVisible();
+        await expect(lawTab).toContainText('Construction Law');
+        await expect(lawTab).toContainText('AI-powered legal guidance');
+
+        // Verify search bar exists
+        const searchInput = page.locator('input[placeholder*="Search construction law"]');
+        await expect(searchInput).toBeVisible();
+
+        // Search for "Contracts" and verify only matched cards remain visible
+        await searchInput.fill('payment');
+        const contractsCard = page.locator('.law-card', { hasText: 'Construction Contracts' });
+        const paymentsCard = page.locator('.law-card', { hasText: 'Payment & Valuations' });
+        await expect(contractsCard).toBeHidden();
+        await expect(paymentsCard).toBeVisible();
+
+        // Clear search
+        await searchInput.fill('');
+        await expect(contractsCard).toBeVisible();
+
+        // Click open on "Payment & Valuations" card to pop up the modal
+        const openBtn = paymentsCard.locator('button', { hasText: 'Open' });
+        await openBtn.click();
+
+        // Assert modal is visible and contains payment valuation content
+        const detailModal = page.locator('#law-detail-modal');
+        await expect(detailModal).toBeVisible();
+        await expect(detailModal).toContainText('Payment Notices and Valuations');
+
+        // Close modal
+        const closeBtn = detailModal.locator('button', { hasText: 'Close Details' });
+        await closeBtn.click();
+        await expect(detailModal).toBeHidden();
+
+        // Interact with Construction Law AI Assistant
+        const promptTextarea = page.locator('#law-ai-prompt');
+        await expect(promptTextarea).toBeVisible();
+
+        // Click on suggested query "What is a Pay Less Notice?"
+        const suggestedQuery = page.locator('button', { hasText: 'What is a Pay Less Notice?' });
+        await suggestedQuery.click();
+        await expect(promptTextarea).toHaveValue('What is a Pay Less Notice?');
+
+        // Click Ask Construction Law AI
+        const askBtn = page.locator('button', { hasText: 'Ask Construction Law AI' });
+        await askBtn.click();
+
+        // Wait for AI response to load (we simulated a 1.5s delay)
+        await page.waitForTimeout(2000);
+        const aiResponse = page.locator('#law-ai-response');
+        await expect(aiResponse).toContainText('Payment and Pay Less Notice Guidelines');
+        await expect(aiResponse).toContainText('Consequences of Failure');
+
+        // Simulate back / forward client-side routing to /construction-law
+        await page.evaluate(() => {
+            history.pushState(null, '', '/construction-law');
+            handleRouting();
+        });
+        await expect(page.locator('#workspace-tab-construction-law')).toBeVisible();
+    });
+
 });
