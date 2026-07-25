@@ -3379,6 +3379,22 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
                 if (proj.quoteNumber && proj.quoteNumber !== "Awaiting Information") {
                     document.getElementById('project-quote-no').value = proj.quoteNumber;
                 }
+                if (proj.region) {
+                    const regSel = document.getElementById('project-region');
+                    if (regSel) {
+                        const options = Array.from(regSel.options);
+                        const matchedOpt = options.find(o => o.value.toLowerCase() === proj.region.toLowerCase());
+                        if (matchedOpt) {
+                            regSel.value = matchedOpt.value;
+                        }
+                    }
+                }
+                if (proj.projectDescription) {
+                    const descInput = document.getElementById('workspace-project-description');
+                    if (descInput) {
+                        descInput.value = proj.projectDescription;
+                    }
+                }
                 saveWorkspaceToLocalStorage();
             }
         },
