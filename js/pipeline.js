@@ -45,54 +45,19 @@ function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
 
     switch (stageId) {
         case "drawing-interpreter":
-            if (!hasCategory("Architectural Drawings") && !hasCategory("Structural Drawings")) {
-                return {
-                    applicable: false,
-                    reason: "No architectural drawings supplied.",
-                    required: "Architectural floor plans, elevations, sections, or structural details."
-                };
-            }
-            break;
+            return { applicable: true };
 
         case "quantity-surveyor":
-            if (!stageCompleted("drawing-interpreter")) {
-                return {
-                    applicable: false,
-                    reason: "No interpreted measurable drawing information exists.",
-                    required: "Successful Drawing Interpreter stage."
-                };
-            }
-            break;
+            return { applicable: true };
 
         case "boq-generator":
-            if (!stageCompleted("quantity-surveyor")) {
-                return {
-                    applicable: false,
-                    reason: "No measured takeoff quantities available.",
-                    required: "Successful Quantity Surveyor takeoff analysis."
-                };
-            }
-            break;
+            return { applicable: true };
 
         case "cost-estimator":
-            if (!stageCompleted("boq-generator")) {
-                return {
-                    applicable: false,
-                    reason: "No BOQ exists to perform estimation.",
-                    required: "Successful BOQ Generator stage results."
-                };
-            }
-            break;
+            return { applicable: true };
 
         case "quotation-generator":
-            if (!stageCompleted("cost-estimator")) {
-                return {
-                    applicable: false,
-                    reason: "No cost estimation available to calculate the bid summary.",
-                    required: "Successful cost estimator stage results."
-                };
-            }
-            break;
+            return { applicable: true };
     }
 
     return { applicable: true };
@@ -110,8 +75,8 @@ window.BQAIPipeline = {
         { id: "document-classification", name: "Document Classification", promptFile: "trade-classifier.md", msg: "Categorizing tender files..." },
         { id: "document-intelligence", name: "Document Intelligence", promptFile: "document-intelligence.md", msg: "Analyzing project intelligence..." },
         { id: "drawing-interpreter", name: "Drawing Detection", promptFile: "drawing-interpreter.md", msg: "Detecting visible structural nodes..." },
+        { id: "quantity-surveyor", name: "Quantity Takeoff", promptFile: "quantity-surveyor.md", msg: "Measuring physical dimensions..." },
         { id: "boq-generator", name: "BOQ Generation", promptFile: "boq-generator.md", msg: "Extracting Bill of Quantities..." },
-        { id: "quantity-surveyor", name: "Quantity Survey", promptFile: "quantity-surveyor.md", msg: "Measuring physical dimensions..." },
         { id: "cost-estimator", name: "Cost Estimation", promptFile: "cost-estimator.md", msg: "Pricing materials, labor, plant..." },
         { id: "material-analysis", name: "Material Analysis", promptFile: null, msg: "Analyzing material schedule..." },
         { id: "labour-analysis", name: "Labour Analysis", promptFile: null, msg: "Analyzing craft hours..." },
