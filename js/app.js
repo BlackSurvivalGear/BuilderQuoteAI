@@ -3358,25 +3358,38 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
     const projDateInput = document.getElementById('project-date');
 
     let wasAutoFilled = false;
-    if (!projNameInput.value) {
-        projNameInput.value = 'Not Supplied';
-        wasAutoFilled = true;
-    }
-    if (!projClientInput.value) {
-        projClientInput.value = 'Not Supplied';
-        wasAutoFilled = true;
-    }
-    if (!projSiteInput.value) {
-        projSiteInput.value = 'Awaiting Information';
-        wasAutoFilled = true;
-    }
-    if (!projQuoteNoInput.value) {
-        projQuoteNoInput.value = 'BQ-PENDING-' + Math.floor(100 + Math.random() * 900);
-        wasAutoFilled = true;
-    }
-    if (!projDateInput.value) {
-        projDateInput.value = new Date().toISOString().substring(0, 10);
-        wasAutoFilled = true;
+    // Only apply dummy default/fallback values if there are NO uploaded files.
+    // If files are uploaded, we expect OCR and AI extraction to populate these fields.
+    if (uploadedFiles.length === 0) {
+        if (!projNameInput.value) {
+            projNameInput.value = 'Not Supplied';
+            wasAutoFilled = true;
+        }
+        if (!projClientInput.value) {
+            projClientInput.value = 'Not Supplied';
+            wasAutoFilled = true;
+        }
+        if (!projSiteInput.value) {
+            projSiteInput.value = 'Awaiting Information';
+            wasAutoFilled = true;
+        }
+        if (!projQuoteNoInput.value) {
+            projQuoteNoInput.value = 'BQ-PENDING-' + Math.floor(100 + Math.random() * 900);
+            wasAutoFilled = true;
+        }
+        if (!projDateInput.value) {
+            projDateInput.value = new Date().toISOString().substring(0, 10);
+            wasAutoFilled = true;
+        }
+    } else {
+        // Clear any dummy defaults from previous dry-runs to prevent contamination of AI extraction
+        if (projNameInput.value === 'Not Supplied') projNameInput.value = '';
+        if (projClientInput.value === 'Not Supplied') projClientInput.value = '';
+        if (projSiteInput.value === 'Awaiting Information') projSiteInput.value = '';
+        if (projQuoteNoInput.value && projQuoteNoInput.value.startsWith('BQ-PENDING-')) projQuoteNoInput.value = '';
+        if (!projDateInput.value) {
+            projDateInput.value = new Date().toISOString().substring(0, 10);
+        }
     }
 
     const projDescInput = document.getElementById('workspace-project-description');
