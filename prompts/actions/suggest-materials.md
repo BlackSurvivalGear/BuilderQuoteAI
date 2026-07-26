@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Suggest Materials
+# QuantisAI Action Prompt – Suggest Materials
 
 ## ROLE
 

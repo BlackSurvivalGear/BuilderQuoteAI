@@ -1,5 +1,5 @@
 /**
- * BuilderQuoteAI - Phase 2 AI Orchestration Engine (pipeline.js)
+ * QuantisAI - Phase 2 AI Orchestration Engine (pipeline.js)
  * Implements a 12-stage sequential AI pipeline, structured JSON contracts,
  * JSON validation layer, state persistence, step reruns, and developer logging.
  */
@@ -793,7 +793,7 @@ window.BQAIPipeline = {
                     return {
                         stage: "document-classification",
                         status: "success",
-                        classification: "Builder Quote",
+                        classification: "QuantisAI",
                         metadata: {
                             projectName: proj.projectName || "Not Extracted",
                             clientName: proj.clientName || "Not Extracted",
@@ -1012,10 +1012,10 @@ window.BQAIPipeline = {
     // Persistence Layer
     Persistence: {
         saveStages(stageOutputs) {
-            localStorage.setItem("builder_quote_stages", JSON.stringify(stageOutputs));
+            localStorage.setItem("quantis_ai_stages", JSON.stringify(stageOutputs));
         },
         loadStages() {
-            const raw = localStorage.getItem("builder_quote_stages");
+            const raw = localStorage.getItem("quantis_ai_stages");
             try {
                 return raw ? JSON.parse(raw) : {};
             } catch (err) {
@@ -1024,10 +1024,10 @@ window.BQAIPipeline = {
             }
         },
         saveLogs(logs) {
-            localStorage.setItem("builder_quote_pipeline_logs", JSON.stringify(logs));
+            localStorage.setItem("quantis_ai_pipeline_logs", JSON.stringify(logs));
         },
         loadLogs() {
-            const raw = localStorage.getItem("builder_quote_pipeline_logs");
+            const raw = localStorage.getItem("quantis_ai_pipeline_logs");
             try {
                 return raw ? JSON.parse(raw) : [];
             } catch (err) {
@@ -1036,8 +1036,8 @@ window.BQAIPipeline = {
             }
         },
         clearAll() {
-            localStorage.removeItem("builder_quote_stages");
-            localStorage.removeItem("builder_quote_pipeline_logs");
+            localStorage.removeItem("quantis_ai_stages");
+            localStorage.removeItem("quantis_ai_pipeline_logs");
         }
     },
 

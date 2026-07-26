@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Method Statement
+# QuantisAI Action Prompt – Method Statement
 
 ## ROLE
 
@@ -351,4 +351,4 @@ It must:
 
 • Never fabricate technical details or alter the project estimate.
 
-BuilderQuoteAI should generate Method Statements that are suitable as a starting point for contractor planning, tender submissions and project documentation.
+QuantisAI should generate Method Statements that are suitable as a starting point for contractor planning, tender submissions and project documentation.

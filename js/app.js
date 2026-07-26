@@ -1,8 +1,9 @@
-/* BuilderQuoteAI - Premium JS Interaction Engine & AI Quantity Surveyor Workspace */
+/* QuantisAI - Premium JS Interaction Engine & AI Quantity Surveyor Workspace */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialize Lucide Icons
+    // 1. Initialize Lucide Icons & Theme
     initLucide();
+    initTheme();
 
     // 2. Dynamic Year Injection
     const yearSpan = document.getElementById('current-year');
@@ -137,6 +138,72 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Initialize Lucide icons helper */
 function initLucide() {
     if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+/* Theme Initialisation, Event Listeners and State Persistence */
+function initTheme() {
+    const savedTheme = localStorage.getItem('quantis_theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Default to system preference if no saved theme
+    let activeTheme = 'dark'; // default to premium dark mode
+    if (savedTheme) {
+        activeTheme = savedTheme;
+    } else if (window.matchMedia && !systemPrefersDark) {
+        activeTheme = 'light';
+    }
+
+    // Apply theme
+    applyTheme(activeTheme);
+
+    // Add Event Listeners for both desktop and mobile toggle buttons
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const mobileThemeBtn = document.getElementById('mobile-theme-toggle-btn');
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+            const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(nextTheme);
+        });
+    }
+
+    if (mobileThemeBtn) {
+        mobileThemeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+            const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(nextTheme);
+        });
+    }
+
+    // Watch for system preference changes and update if user hasn't set an explicit preference
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('quantis_theme')) {
+            applyTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+}
+
+function applyTheme(theme) {
+    const iconEl = document.getElementById('theme-toggle-icon');
+    const mobileIconEl = document.getElementById('mobile-theme-toggle-icon');
+
+    if (theme === 'light') {
+        document.documentElement.classList.add('light');
+        if (iconEl) iconEl.setAttribute('data-lucide', 'sun');
+        if (mobileIconEl) mobileIconEl.setAttribute('data-lucide', 'sun');
+        localStorage.setItem('quantis_theme', 'light');
+    } else {
+        document.documentElement.classList.remove('light');
+        if (iconEl) iconEl.setAttribute('data-lucide', 'moon');
+        if (mobileIconEl) mobileIconEl.setAttribute('data-lucide', 'moon');
+        localStorage.setItem('quantis_theme', 'dark');
+    }
+
+    // Reinitialize icons to redraw sun/moon correctly
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
     }
 }
@@ -543,7 +610,7 @@ function syncUIToActiveProject() {
 
 // Local Storage initialization & restoration
 function initWorkspaceData() {
-    const savedData = localStorage.getItem('builder_quote_data');
+    const savedData = localStorage.getItem('quantis_ai_data');
     if (savedData) {
         try {
             const data = JSON.parse(savedData);
@@ -622,7 +689,7 @@ function saveWorkspaceToLocalStorage() {
         activeProject: window.activeProject
     };
 
-    localStorage.setItem('builder_quote_data', JSON.stringify(dataPayload));
+    localStorage.setItem('quantis_ai_data', JSON.stringify(dataPayload));
     window.uploadedFiles = uploadedFiles;
 }
 
@@ -862,7 +929,7 @@ function updateProjectReviewPanelStats() {
 
 // Initialize AI Settings from Local Storage
 function initAIProviders() {
-    const savedProviders = localStorage.getItem('builder_quote_ai_settings');
+    const savedProviders = localStorage.getItem('quantis_ai_ai_settings');
     if (savedProviders) {
         try {
             const data = JSON.parse(savedProviders);
@@ -885,7 +952,7 @@ function initAIProviders() {
 
 // Save settings to Local Storage
 function saveAISettings() {
-    localStorage.setItem('builder_quote_ai_settings', JSON.stringify(aiProviders));
+    localStorage.setItem('quantis_ai_ai_settings', JSON.stringify(aiProviders));
 }
 
 // Render Settings Providers dynamically
@@ -1274,7 +1341,7 @@ function classifyTenderFile(file) {
 
 // Asynchronous text extractor for PDF/TXT files with caching
 async function extractTextFromFile(file) {
-    const cacheKey = `bqa_ocr_cache_${file.name}_${file.size}`;
+    const cacheKey = `qai_ocr_cache_${file.name}_${file.size}`;
     const cachedText = localStorage.getItem(cacheKey);
     if (cachedText) {
         console.log(`[OCR Cache Hit] Restored text for: ${file.name}`);
@@ -2684,7 +2751,7 @@ function exportWorkspace(type) {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `BuilderQuoteAI_Estimate_${document.getElementById('project-quote-no').value || 'Export'}.csv`);
+        link.setAttribute("download", `QuantisAI_Estimate_${document.getElementById('project-quote-no').value || 'Export'}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2709,7 +2776,7 @@ function exportWorkspace(type) {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `BuilderQuoteAI_Payload_${projectInfo.quoteNo || 'export'}.json`);
+        downloadAnchor.setAttribute("download", `QuantisAI_Payload_${projectInfo.quoteNo || 'export'}.json`);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         document.body.removeChild(downloadAnchor);
@@ -2838,14 +2905,14 @@ function triggerWorkflowDemoAnimation() {
 }
 
 /* Fallback Logo Display Logic */
-// These globally accessible functions are invoked if the BuilderQuoteAI.png assets are missing
+// These globally accessible functions are invoked if the QuantisAI.png assets are missing
 function handleLogoError() {
     const container = document.getElementById('logo-container');
     if (container) {
         container.innerHTML = `
             <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                <span class="text-brand-gold font-black bg-brand-gold-muted px-2 py-1 rounded-lg border border-brand-gold-border text-lg font-mono">B</span>
-                BuilderQuote<span class="text-brand-gold">AI</span>
+                <span class="text-brand-gold font-black bg-brand-gold-muted px-2 py-1 rounded-lg border border-brand-gold-border text-lg font-mono">Q</span>
+                Quantis<span class="text-brand-gold">AI</span>
             </span>
         `;
     }
@@ -2856,8 +2923,8 @@ function handleFooterLogoError() {
     if (container) {
         container.innerHTML = `
             <span class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5 justify-center md:justify-start">
-                <span class="text-brand-gold font-extrabold bg-brand-gold-muted px-1.5 py-0.5 rounded border border-brand-gold-border text-sm font-mono">B</span>
-                BuilderQuote<span class="text-brand-gold">AI</span>
+                <span class="text-brand-gold font-extrabold bg-brand-gold-muted px-1.5 py-0.5 rounded border border-brand-gold-border text-sm font-mono">Q</span>
+                Quantis<span class="text-brand-gold">AI</span>
             </span>
         `;
     }
@@ -3055,7 +3122,7 @@ function animateConfidenceAtStep(stepIndex) {
 }
 
 function logDeveloperDebugInfo(info) {
-    console.log("========== BuilderQuoteAI ==========");
+    console.log("========== QuantisAI ==========");
     console.log("Project Name:", info.projectName || "Unspecified");
     console.log("Documents Uploaded:", info.docsCount || 0);
     console.log("Pages Analysed:", info.pagesCount || 0);
@@ -3692,7 +3759,7 @@ function downloadDebugReport() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `BuilderQuoteAI_Debug_Report_${report.quoteNumber}.json`);
+    downloadAnchor.setAttribute("download", `QuantisAI_Debug_Report_${report.quoteNumber}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     document.body.removeChild(downloadAnchor);
@@ -3840,7 +3907,7 @@ function renderQuotationNotAvailablePage(finalOutputs) {
                     Quotation Blocked
                 </span>
                 <h2 class="text-white text-xl font-bold uppercase tracking-tight">Quotation Not Yet Available</h2>
-                <p class="text-xs text-gray-400 mt-1">BuilderQuoteAI cannot generate a professional quotation because insufficient project information has been supplied.</p>
+                <p class="text-xs text-gray-400 mt-1">QuantisAI cannot generate a professional quotation because insufficient project information has been supplied.</p>
             </div>
 
             <!-- Current Project Status -->
@@ -4286,7 +4353,7 @@ function askLawAI() {
     setTimeout(() => {
         // Generate a beautiful, highly detailed simulated legal response matching the prompt
         let title = "Sovereign Law AI Counsel";
-        let summary = "The following advice is generated by the BuilderQuoteAI Sovereign legal engine for guidance purposes.";
+        let summary = "The following advice is generated by the QuantisAI Sovereign legal engine for guidance purposes.";
         let points = [];
         let riskLevel = "Medium Risk";
         let riskColor = "text-yellow-400 bg-yellow-950/40 border-yellow-900";

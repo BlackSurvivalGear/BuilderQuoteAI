@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Optimise Costs
+# QuantisAI Action Prompt – Optimise Costs
 
 ## ROLE
 
@@ -352,4 +352,4 @@ Every recommendation must:
 
 • Be suitable for inclusion in professional client reports.
 
-BuilderQuoteAI should recommend smarter construction decisions—not cheaper, lower-quality ones.
+QuantisAI should recommend smarter construction decisions—not cheaper, lower-quality ones.

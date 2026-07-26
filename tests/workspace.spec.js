@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
-test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
+test.describe('QuantisAI Workspace Integration Suite', () => {
 
     test.beforeEach(async ({ page }) => {
         // Go to the local page (assuming server is running on port 3000)
@@ -10,7 +10,7 @@ test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
 
     test('should load landing page and branding correctly', async ({ page }) => {
         // Verify title
-        await expect(page).toHaveTitle(/BuilderQuoteAI/);
+        await expect(page).toHaveTitle(/QuantisAI/);
 
         // Verify landing buttons
         const startBtn = page.locator('text=Get Started Free');
@@ -50,7 +50,7 @@ test.describe('BuilderQuoteAI Workspace Integration Suite', () => {
         await regionSelect.selectOption('Scotland');
 
         // Check local storage to see if saved
-        const savedDataStr = await page.evaluate(() => localStorage.getItem('builder_quote_data'));
+        const savedDataStr = await page.evaluate(() => localStorage.getItem('quantis_ai_data'));
         expect(savedDataStr).not.toBeNull();
         const data = JSON.parse(savedDataStr);
         expect(data.projectInfo.region).toBe('Scotland');

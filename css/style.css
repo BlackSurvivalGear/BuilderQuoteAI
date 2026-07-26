@@ -1,4 +1,4 @@
-/* Custom Styles & Advanced Effects for BuilderQuoteAI */
+/* Custom Styles & Advanced Effects for QuantisAI */
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -229,4 +229,167 @@ input[type="range"]::-moz-range-thumb:hover {
         font-size: 12px !important;
         page-break-inside: avoid;
     }
+}
+
+/* Day/Night Theme CSS Custom Properties & Dynamic Overrides */
+:root {
+    --brand-matte: #0B0B0C;
+    --brand-graphite: #18181C;
+    --brand-dark: #121214;
+    --brand-gold: #D4AF37;
+    --brand-gold-hover: #C19E2F;
+    --brand-gold-muted: rgba(212, 175, 55, 0.15);
+    --brand-gold-border: rgba(212, 175, 55, 0.3);
+    --brand-glass: rgba(24, 24, 28, 0.7);
+    --brand-glass-border: rgba(255, 255, 255, 0.08);
+    --brand-glass-hover: rgba(255, 255, 255, 0.03);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+html.light {
+    --brand-matte: #F3F4F6;
+    --brand-graphite: #FFFFFF;
+    --brand-dark: #E5E7EB;
+    --brand-gold: #A17F1A; /* Premium darker gold for readability on white bg */
+    --brand-gold-hover: #8C6E16;
+    --brand-gold-muted: rgba(161, 127, 26, 0.15);
+    --brand-gold-border: rgba(161, 127, 26, 0.35);
+    --brand-glass: rgba(255, 255, 255, 0.85);
+    --brand-glass-border: rgba(0, 0, 0, 0.1);
+    --brand-glass-hover: rgba(0, 0, 0, 0.04);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 41, 55, 0.08);
+}
+
+/* Universal Transition for Theme Switch */
+html, body, header, section, div, span, p, h1, h2, h3, h4, h5, h6, input, select, textarea, button, a, table, tr, td, th {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Overrides when html has class light */
+html.light body {
+    background-color: var(--brand-matte) !important;
+    color: #1F2937 !important;
+}
+
+html.light .bg-brand-matte {
+    background-color: var(--brand-matte) !important;
+}
+
+html.light .bg-brand-graphite,
+html.light .bg-[#18181c],
+html.light .bg-[#18181C],
+html.light .bg-[#1a1a1f],
+html.light .bg-[#1e1e24],
+html.light .bg-[#151518],
+html.light .bg-[#121214],
+html.light .bg-brand-graphite\/40,
+html.light .bg-brand-graphite\/50,
+html.light .bg-brand-graphite\/80,
+html.light .bg-brand-matte\/40,
+html.light .bg-brand-matte\/50,
+html.light .bg-[#18181c]\/40,
+html.light .bg-[#18181c]\/60,
+html.light .bg-[#18181c]\/80 {
+    background-color: var(--brand-graphite) !important;
+}
+
+html.light .bg-brand-dark {
+    background-color: var(--brand-dark) !important;
+}
+
+/* Glassmorphism custom blur and borders */
+html.light .bg-brand-glass {
+    background: var(--brand-glass) !important;
+}
+
+/* Borders */
+html.light .border-brand-glass-border,
+html.light .border-brand-glass-border\/40,
+html.light .border-brand-glass-border\/60,
+html.light .border-brand-glass-border\/80,
+html.light .divide-brand-glass-border\/40 {
+    border-color: var(--brand-glass-border) !important;
+}
+
+/* Standard Tailwind Text Color Overrides for High Contrast Light Mode */
+html.light .text-white,
+html.light .text-gray-100,
+html.light .text-gray-200 {
+    color: #111827 !important;
+}
+
+html.light .text-gray-300,
+html.light .text-gray-400 {
+    color: #4B5563 !important;
+}
+
+html.light .text-gray-500 {
+    color: #6B7280 !important;
+}
+
+html.light .text-brand-gold {
+    color: var(--brand-gold) !important;
+}
+
+html.light .bg-brand-gold {
+    background-color: var(--brand-gold) !important;
+    color: #FFFFFF !important;
+}
+
+html.light .bg-brand-gold-muted {
+    background-color: var(--brand-gold-muted) !important;
+}
+
+html.light .border-brand-gold-border {
+    border-color: var(--brand-gold-border) !important;
+}
+
+/* Modals */
+html.light #law-detail-modal,
+html.light #boq-viewer-modal,
+html.light #metadata-conflict-modal {
+    background-color: rgba(17, 24, 39, 0.45) !important; /* soft dark overlay for white card popups */
+}
+
+/* Input Fields and Selectors */
+html.light input,
+html.light select,
+html.light textarea {
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+    border-color: #D1D5DB !important;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+    border-color: var(--brand-gold) !important;
+}
+
+/* Form placeholders */
+html.light ::placeholder {
+    color: #9CA3AF !important;
+}
+
+/* Diagnostics Panel Code styling block */
+html.light .bg-[#0b0b0c],
+html.light .bg-[#0d0d0e] {
+    background-color: #F9FAFB !important;
+    color: #111827 !important;
+}
+
+html.light #diagnostic-table-body tr {
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+}
+
+html.light #diagnostic-table-body tr:hover {
+    background-color: #F3F4F6 !important;
+}
+
+/* Flowchart nodes styling override */
+html.light .flowchart-node {
+    background-color: #FFFFFF !important;
+    color: #111827 !important;
+    border-color: var(--brand-glass-border) !important;
 }
