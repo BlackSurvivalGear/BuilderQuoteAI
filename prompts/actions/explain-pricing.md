@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Explain Pricing
+# QuantisAI Action Prompt – Explain Pricing
 
 ## ROLE
 
@@ -264,4 +264,4 @@ It must:
 
 • Never fabricate costs, quantities or assumptions.
 
-BuilderQuoteAI should help clients understand the estimate, not simply display numbers.
+QuantisAI should help clients understand the estimate, not simply display numbers.

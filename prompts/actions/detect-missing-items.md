@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Detect Missing Items
+# QuantisAI Action Prompt – Detect Missing Items
 
 ## ROLE
 

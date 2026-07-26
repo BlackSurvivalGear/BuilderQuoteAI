@@ -1,4 +1,51 @@
-/* Custom Styles & Advanced Effects for BuilderQuoteAI */
+/* Custom Styles, Colors & Variable-based Redesign for QuantisAI */
+
+:root {
+    /* Default Dark Theme: Deep Navy, Bright Blue, Silver, White */
+    --color-bg-matte: #0A192F;
+    --color-bg-graphite: #112240;
+    --color-bg-dark: #0F172A;
+    --color-brand-blue: #3B82F6;
+    --color-brand-blue-hover: #2563EB;
+    --color-brand-blue-muted: rgba(59, 130, 246, 0.15);
+    --color-brand-blue-border: rgba(59, 130, 246, 0.3);
+    --color-glass: rgba(10, 25, 47, 0.75);
+    --color-glass-border: rgba(255, 255, 255, 0.08);
+    --color-glass-hover: rgba(255, 255, 255, 0.03);
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #94A3B8;
+    --color-text-muted: #64748B;
+    --color-glow: rgba(59, 130, 246, 0.4);
+
+    --color-scroll-track: #0A192F;
+    --color-scroll-thumb: #112240;
+}
+
+:root.light-mode {
+    /* Light Mode: Modern Premium Enterprise SaaS Look (Autodesk / Procore inspired) */
+    --color-bg-matte: #F8FAFC;
+    --color-bg-graphite: #FFFFFF;
+    --color-bg-dark: #E2E8F0;
+    --color-brand-blue: #1D4ED8;
+    --color-brand-blue-hover: #1E40AF;
+    --color-brand-blue-muted: rgba(29, 78, 216, 0.1);
+    --color-brand-blue-border: rgba(29, 78, 216, 0.2);
+    --color-glass: rgba(255, 255, 255, 0.85);
+    --color-glass-border: rgba(15, 23, 42, 0.08);
+    --color-glass-hover: rgba(15, 23, 42, 0.03);
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #334155;
+    --color-text-muted: #64748B;
+    --color-glow: rgba(29, 78, 216, 0.15);
+
+    --color-scroll-track: #F8FAFC;
+    --color-scroll-thumb: #CBD5E1;
+}
+
+/* Custom transitions for smooth theme changes */
+*, *::before, *::after {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -7,22 +54,22 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: #0B0B0C;
+    background: var(--color-scroll-track);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #18181C;
-    border: 2px solid #0B0B0C;
+    background: var(--color-scroll-thumb);
+    border: 2px solid var(--color-scroll-track);
     border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #D4AF37;
+    background: var(--color-brand-blue);
 }
 
 /* Glassmorphism custom blur and borders */
 .bg-brand-glass {
-    background: rgba(11, 11, 12, 0.75);
+    background: var(--color-glass);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
@@ -34,9 +81,9 @@
     transition-duration: 300ms;
 }
 
-/* Text glow */
+/* Text glow using new bright blue variable */
 .text-glow-gold {
-    text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    text-shadow: 0 0 10px var(--color-glow);
 }
 
 /* Custom premium input slider overrides */
@@ -46,15 +93,15 @@ input[type="range"]::-webkit-slider-thumb {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #D4AF37;
+    background: var(--color-brand-blue);
     cursor: pointer;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 10px var(--color-glow);
     transition: transform 0.1s ease, background-color 0.1s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
-    background: #FFF1C5;
+    background: #FFF;
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -62,15 +109,15 @@ input[type="range"]::-moz-range-thumb {
     height: 16px;
     border: none;
     border-radius: 50%;
-    background: #D4AF37;
+    background: var(--color-brand-blue);
     cursor: pointer;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 10px var(--color-glow);
     transition: transform 0.1s ease, background-color 0.1s ease;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
     transform: scale(1.2);
-    background: #FFF1C5;
+    background: #FFF;
 }
 
 /* Animation Utilities */
@@ -91,11 +138,87 @@ input[type="range"]::-moz-range-thumb:hover {
     position: absolute;
     width: 100%;
     height: 2px;
-    background: linear-gradient(to right, transparent, #D4AF37, transparent);
+    background: linear-gradient(to right, transparent, var(--color-brand-blue), transparent);
     left: 0;
     animation: scanningLine 3s infinite linear;
-    box-shadow: 0 0 12px 2px rgba(212, 175, 55, 0.7);
+    box-shadow: 0 0 12px 2px var(--color-glow);
     pointer-events: none;
+}
+
+/* --- LIGHT MODE HIGHER CONTRAST OVERRIDES --- */
+.light-mode body {
+    color: #1E293B !important;
+}
+
+.light-mode h1,
+.light-mode h2,
+.light-mode h3,
+.light-mode h4,
+.light-mode h5,
+.light-mode h6 {
+    color: #0F172A !important;
+}
+
+.light-mode p,
+.light-mode span:not(.text-brand-gold):not(.status-badge):not(.step-num):not(.currency-symbol),
+.light-mode td:not(.text-brand-gold):not(.font-bold) {
+    color: #334155 !important;
+}
+
+.light-mode .text-gray-300,
+.light-mode .text-gray-400,
+.light-mode .text-gray-500 {
+    color: #475569 !important;
+}
+
+.light-mode .text-white {
+    color: #0F172A !important;
+}
+
+.light-mode .border-brand-glass-border,
+.light-mode .border-brand-glass-border\/30,
+.light-mode .border-brand-glass-border\/40 {
+    border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.light-mode .bg-brand-matte\/60,
+.light-mode .bg-brand-matte\/80,
+.light-mode .bg-brand-matte\/30,
+.light-mode .bg-brand-matte\/40,
+.light-mode .bg-brand-matte\/50 {
+    background-color: #FFFFFF !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.light-mode .bg-brand-graphite {
+    background-color: #FFFFFF !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.light-mode .hover\:bg-brand-glass-hover:hover {
+    background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+.light-mode input,
+.light-mode textarea,
+.light-mode select {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+.light-mode input::placeholder,
+.light-mode textarea::placeholder {
+    color: #94A3B8 !important;
+}
+
+/* Ensure checklists look beautiful in light mode */
+.light-mode .status-badge {
+    filter: brightness(0.85);
+}
+
+.light-mode .text-brand-gold {
+    color: var(--color-brand-blue) !important;
 }
 
 /* --- PREMIUM PRINT UTILITIES & PRINT STYLESHEET --- */
