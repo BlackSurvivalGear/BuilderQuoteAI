@@ -104,7 +104,7 @@ window.BQAIPipeline = {
     STAGES: [
         { id: "upload-documents", name: "Upload Documents", promptFile: null, msg: "Reading construction drawings..." },
         { id: "ocr", name: "OCR", promptFile: null, msg: "Extracting document texts..." },
-        { id: "metadata-extraction", name: "Metadata Extraction", promptFile: "document-intelligence.md", msg: "Extracting project metadata..." },
+        { id: "metadata-extraction", name: "Metadata Extraction", promptFile: "metadata-extraction.md", msg: "Extracting project metadata..." },
         { id: "update-project-state", name: "Replace Active Project State", promptFile: null, msg: "Updating active project state..." },
         { id: "validation", name: "Validation", promptFile: null, msg: "Validating financial totals..." },
         { id: "document-classification", name: "Document Classification", promptFile: "trade-classifier.md", msg: "Categorizing tender files..." },
@@ -1206,12 +1206,20 @@ window.BQAIPipeline = {
                     this.addLog(stage.id, startStageTime, Date.now(), activeProv, false, failReason, Math.min(retryCount, maxRetries), 0, activeProv ? activeProv.defaultModel : "Sovereign-Llama3-8B", stackTrace);
 
                     // Mark as failed and SAVE intermediate results instead of crashing the application
-                    currentOutputs[stage.id] = {
-                        stage: stage.id,
-                        status: "failed",
-                        reason: failReason,
-                        stack: stackTrace
-                    };
+                    if (stage.id === "metadata-extraction") {
+                        currentOutputs[stage.id] = {
+                            stage: "metadata-extraction",
+                            status: "failed",
+                            reason: failReason
+                        };
+                    } else {
+                        currentOutputs[stage.id] = {
+                            stage: stage.id,
+                            status: "failed",
+                            reason: failReason,
+                            stack: stackTrace
+                        };
+                    }
                     BQAIPipeline.Persistence.saveStages(currentOutputs);
 
                     if (stage.id === "metadata-extraction") {
