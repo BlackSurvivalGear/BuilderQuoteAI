@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Workspace Data and Providers
     initWorkspaceData();
     initAIProviders();
+    updateQSEngineDebugPanel();
 
     const projectRegionSelect = document.getElementById('project-region');
     if (projectRegionSelect) {
@@ -3601,6 +3602,10 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
                 }
                 saveWorkspaceToLocalStorage();
             }
+
+            if (state === "Completed") {
+                updateQSEngineDebugPanel();
+            }
         },
         // Progress text callback
         (msgText) => {
@@ -4689,4 +4694,58 @@ function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         showToast("Copied to Clipboard", "AI Response has been successfully copied to your clipboard.");
     });
+}
+
+// Dynamically populate the Quantity Surveyor Engine Debug Panel (Live Stage 8-11 Parameters)
+function updateQSEngineDebugPanel() {
+    let outputs = (window.BQAIPipeline && window.BQAIPipeline.state) ? window.BQAIPipeline.state.stageOutputs : {};
+    if (!outputs || Object.keys(outputs).length === 0) {
+        if (window.BQAIPipeline && window.BQAIPipeline.Persistence) {
+            outputs = window.BQAIPipeline.Persistence.loadStages();
+        }
+    }
+
+    // 1. Drawing Detection
+    const ddEl = document.getElementById('debug-qs-drawing-detection');
+    if (ddEl) {
+        const ddData = outputs["drawing-interpreter"];
+        if (ddData) {
+            ddEl.textContent = JSON.stringify(ddData, null, 2);
+        } else {
+            ddEl.textContent = "Awaiting drawing detection execution...";
+        }
+    }
+
+    // 2. Quantity Takeoff
+    const qtEl = document.getElementById('debug-qs-quantity-takeoff');
+    if (qtEl) {
+        const qtData = outputs["quantity-surveyor"];
+        if (qtData) {
+            qtEl.textContent = JSON.stringify(qtData, null, 2);
+        } else {
+            qtEl.textContent = "Awaiting quantity takeoff execution...";
+        }
+    }
+
+    // 3. Generated BOQ
+    const boqEl = document.getElementById('debug-qs-generated-boq');
+    if (boqEl) {
+        const boqData = outputs["boq-generator"];
+        if (boqData) {
+            boqEl.textContent = JSON.stringify(boqData, null, 2);
+        } else {
+            boqEl.textContent = "Awaiting BOQ generation execution...";
+        }
+    }
+
+    // 4. Pricing Inputs & Final Estimate
+    const estEl = document.getElementById('debug-qs-final-estimate');
+    if (estEl) {
+        const estData = outputs["cost-estimator"];
+        if (estData) {
+            estEl.textContent = JSON.stringify(estData, null, 2);
+        } else {
+            estEl.textContent = "Awaiting cost estimation execution...";
+        }
+    }
 }

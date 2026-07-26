@@ -835,6 +835,54 @@
                                     <span class="text-brand-gold block mb-1 uppercase tracking-wider font-bold text-xs">11. Active Project State Object (After Replace Active Project State):</span>
                                     <pre id="debug-active-project-state" class="bg-brand-graphite/50 p-2.5 rounded border border-brand-gold/30 text-white overflow-x-auto whitespace-pre-wrap max-h-[150px] font-mono text-[10px]">No active project loaded.</pre>
                                 </div>
+                                <div>
+                                    <span class="text-brand-gold block mb-1 uppercase tracking-wider font-bold text-xs">12. Quantity Surveyor Engine Debug Panel:</span>
+                                    <div id="qs-engine-debug-panel" class="bg-brand-graphite border border-brand-gold/30 rounded-xl p-4 space-y-4 font-sans text-xs text-gray-300">
+                                        <!-- Section A: Drawing Detection -->
+                                        <div class="border-b border-brand-glass-border/30 pb-3">
+                                            <span class="font-bold text-white block mb-2 uppercase tracking-wider text-[10px] text-brand-gold flex items-center gap-1.5">
+                                                <i data-lucide="eye" class="w-3.5 h-3.5 text-brand-gold"></i>
+                                                Drawing Detection (Stage 8)
+                                            </span>
+                                            <div id="debug-qs-drawing-detection" class="bg-brand-matte/50 p-2.5 rounded border border-brand-glass-border/30 font-mono text-[10px] text-gray-400 overflow-x-auto max-h-[150px]">
+                                                No drawing detection run yet.
+                                            </div>
+                                        </div>
+
+                                        <!-- Section B: Quantity Takeoff / Generated Measurements -->
+                                        <div class="border-b border-brand-glass-border/30 pb-3">
+                                            <span class="font-bold text-white block mb-2 uppercase tracking-wider text-[10px] text-brand-gold flex items-center gap-1.5">
+                                                <i data-lucide="calculator" class="w-3.5 h-3.5 text-brand-gold"></i>
+                                                Quantity Takeoff & Generated Measurements (Stage 9)
+                                            </span>
+                                            <div id="debug-qs-quantity-takeoff" class="bg-brand-matte/50 p-2.5 rounded border border-brand-glass-border/30 font-mono text-[10px] text-gray-400 overflow-x-auto max-h-[200px]">
+                                                No quantity takeoff run yet.
+                                            </div>
+                                        </div>
+
+                                        <!-- Section C: Generated BOQ -->
+                                        <div class="border-b border-brand-glass-border/30 pb-3">
+                                            <span class="font-bold text-white block mb-2 uppercase tracking-wider text-[10px] text-brand-gold flex items-center gap-1.5">
+                                                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-brand-gold"></i>
+                                                Generated BOQ (Stage 10)
+                                            </span>
+                                            <div id="debug-qs-generated-boq" class="bg-brand-matte/50 p-2.5 rounded border border-brand-glass-border/30 font-mono text-[10px] text-gray-400 overflow-x-auto max-h-[200px]">
+                                                No BOQ generated yet.
+                                            </div>
+                                        </div>
+
+                                        <!-- Section D: Pricing Inputs & Final Estimate -->
+                                        <div>
+                                            <span class="font-bold text-white block mb-2 uppercase tracking-wider text-[10px] text-brand-gold flex items-center gap-1.5">
+                                                <i data-lucide="coins" class="w-3.5 h-3.5 text-brand-gold"></i>
+                                                Pricing Inputs & Final Estimate (Stage 11)
+                                            </span>
+                                            <div id="debug-qs-final-estimate" class="bg-brand-matte/50 p-2.5 rounded border border-brand-glass-border/30 font-mono text-[10px] text-gray-400 overflow-x-auto max-h-[250px]">
+                                                No pricing estimation run yet.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
