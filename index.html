@@ -187,11 +187,11 @@
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Client Name</label>
-                                <input type="text" id="project-client" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors" placeholder="e.g. Mr. & Mrs. Henderson">
+                                <input type="text" id="project-client" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors" placeholder="e.g. David Smith & Emma Smith">
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Site Address</label>
-                                <input type="text" id="project-site" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors" placeholder="e.g. 12 Mayfair Gardens, London">
+                                <input type="text" id="project-site" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors" placeholder="e.g. 45 Maple Close, Altrincham">
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -581,87 +581,87 @@
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="stage-document-intelligence" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                <div id="stage-metadata-extraction" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
                                         <span class="font-medium">3. Metadata Extraction <span id="step-2" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
-                                <div id="stage-page-processing" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                <div id="stage-update-project-state" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">4. Page Processing <span id="step-3" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-document-classification" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">5. Document Classification <span id="step-4" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-drawing-interpreter" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">6. Drawing Detection <span id="step-5" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-boq-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">7. BOQ Extraction <span id="step-6" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-quantity-surveyor" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">8. Quantity Take-off <span id="step-7" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-material-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">9. Material Analysis <span id="step-8" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-labour-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">10. Labour Analysis <span id="step-9" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-plant-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">11. Plant Analysis <span id="step-10" class="inline-block w-1 h-1"></span></span>
-                                    </div>
-                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
-                                </div>
-                                <div id="stage-cost-estimator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
-                                    <div class="flex items-center gap-2">
-                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">12. Cost Estimation <span id="step-11" class="inline-block w-1 h-1"></span></span>
+                                        <span class="font-medium">4. Replace Active Project State <span id="step-3" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
                                 <div id="stage-validation" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">13. Validation <span id="step-12" class="inline-block w-1 h-1"></span></span>
+                                        <span class="font-medium">5. Validation <span id="step-4" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-document-classification" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">6. Document Classification <span id="step-5" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-document-intelligence" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">7. Document Intelligence <span id="step-6" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-drawing-interpreter" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">8. Drawing Detection <span id="step-7" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-boq-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">9. BOQ Generation <span id="step-8" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-quantity-surveyor" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">10. Quantity Survey <span id="step-9" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-cost-estimator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">11. Cost Estimation <span id="step-10" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-material-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">12. Material Analysis <span id="step-11" class="inline-block w-1 h-1"></span></span>
+                                    </div>
+                                    <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
+                                </div>
+                                <div id="stage-labour-analysis" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
+                                        <span class="font-medium">13. Labour Analysis <span id="step-12" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
                                 <div id="stage-quotation-generator" class="flex items-center justify-between p-1 rounded hover:bg-brand-glass-hover text-gray-400">
                                     <div class="flex items-center gap-2">
                                         <i data-lucide="circle" class="w-3.5 h-3.5 shrink-0 text-gray-500 status-icon"></i>
-                                        <span class="font-medium">14. Final Estimate <span id="step-13" class="inline-block w-1 h-1"></span></span>
+                                        <span class="font-medium">14. Final Report <span id="step-13" class="inline-block w-1 h-1"></span></span>
                                     </div>
                                     <span class="status-badge text-[9px] font-mono tracking-wider font-bold">WAITING</span>
                                 </div>
@@ -1874,7 +1874,7 @@
                             </div>
                             <div class="flex items-center gap-3">
                                 <i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i>
-                                <span class="text-gray-300 text-sm">Mayfair, London, W1S 1AR</span>
+                                <span class="text-gray-300 text-sm">Altrincham, Greater Manchester, WA14 2SZ</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <i data-lucide="clock" class="w-5 h-5 text-brand-gold"></i>
