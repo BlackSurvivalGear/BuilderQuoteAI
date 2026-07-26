@@ -1399,6 +1399,32 @@ window.BQAIPipeline = {
                     }
                 }
 
+                // Run side-effects of replacing project state if document-intelligence is completed
+                if (stage.id === "document-intelligence" && result.data && result.data.project) {
+                    const diProj = result.data.project;
+                    // Create a completely new, isolated Project object from Document Intelligence
+                    // completely replacing the active project object. Do not merge or preserve sample/old values.
+                    // Do not overwrite extracted values with defaults.
+                    window.activeProject = {
+                        id: "project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9),
+                        projectName: diProj.projectName || "Not Extracted",
+                        clientName: diProj.clientName || "Not Extracted",
+                        siteAddress: diProj.siteAddress || "Not Extracted",
+                        quoteNumber: diProj.quoteNumber || "Not Extracted",
+                        region: diProj.region || "London",
+                        currency: diProj.currency || "GBP",
+                        projectDescription: diProj.projectDescription || "",
+                        specificationLevel: diProj.specificationLevel || "Premium",
+                        metadataSource: "Document Intelligence"
+                    };
+                    if (typeof syncActiveProjectToUI === 'function') {
+                        syncActiveProjectToUI();
+                    }
+                    if (typeof saveWorkspaceToLocalStorage === 'function') {
+                        saveWorkspaceToLocalStorage();
+                    }
+                }
+
                 // Trace developer logs after each stage is completed/processed
                 const outgoingProject = window.activeProject || {};
                 console.log(`=== STAGE COMPLETED: ${stage.name} ===`);
