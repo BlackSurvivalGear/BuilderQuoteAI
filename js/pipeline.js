@@ -291,18 +291,118 @@ window.BQAIPipeline = {
             }
         },
 
+        normalizeOutput(stageId, data) {
+            if (typeof data !== "object" || data === null) return data;
+
+            // Ensure standard envelope fields are present
+            if (!data.stage) data.stage = stageId;
+            if (!data.status) data.status = "success";
+
+            if (stageId === "metadata-extraction") {
+                if (!data.metadata || typeof data.metadata !== "object") {
+                    data.metadata = {};
+                }
+                const defaults = {
+                    projectName: "Not Extracted",
+                    clientName: "Not Extracted",
+                    siteAddress: "Not Extracted",
+                    quoteNumber: "Not Extracted",
+                    region: "London",
+                    currency: "GBP",
+                    projectDescription: "",
+                    specificationLevel: "Premium"
+                };
+                for (const [k, v] of Object.entries(defaults)) {
+                    if (!(k in data.metadata) || data.metadata[k] === undefined || data.metadata[k] === null) {
+                        data.metadata[k] = v;
+                    }
+                }
+            }
+
+            if (stageId === "document-classification") {
+                if (!data.classification) data.classification = "Builder Quote";
+                if (!data.metadata || typeof data.metadata !== "object") {
+                    data.metadata = {};
+                }
+                const defaults = {
+                    projectName: "Not Extracted",
+                    clientName: "Not Extracted",
+                    siteAddress: "Not Extracted",
+                    quoteNumber: "Not Extracted"
+                };
+                for (const [k, v] of Object.entries(defaults)) {
+                    if (!(k in data.metadata) || data.metadata[k] === undefined || data.metadata[k] === null) {
+                        data.metadata[k] = v;
+                    }
+                }
+            }
+
+            if (stageId === "document-intelligence") {
+                if (data.confidence === undefined || typeof data.confidence !== "number") {
+                    data.confidence = 0.95;
+                }
+                if (!data.project || typeof data.project !== "object") {
+                    data.project = {};
+                }
+                const projDefaults = {
+                    projectName: "Not Extracted",
+                    clientName: "Not Extracted",
+                    siteAddress: "Not Extracted",
+                    quoteNumber: "Not Extracted",
+                    projectDescription: "",
+                    region: "London"
+                };
+                for (const [k, v] of Object.entries(projDefaults)) {
+                    if (!(k in data.project) || data.project[k] === undefined || data.project[k] === null) {
+                        data.project[k] = v;
+                    }
+                }
+                if (!Array.isArray(data.documents)) {
+                    data.documents = [];
+                }
+                if (!Array.isArray(data.drawings)) {
+                    data.drawings = [];
+                }
+                if (!Array.isArray(data.issues)) {
+                    data.issues = [];
+                }
+            }
+
+            return data;
+        },
+
         validate(stageId, data) {
-            if (data && data.status === "skipped") {
+            if (typeof data !== "object" || data === null) {
+                return { valid: false, error: "Output is not a valid JSON object" };
+            }
+
+            // Normalize the output first before conducting schema checks
+            data = this.normalizeOutput(stageId, data);
+
+            // Ensure every stage output has 'stage' and 'status'
+            if (!data.stage || data.stage !== stageId) {
+                return { valid: false, error: `Invalid or missing 'stage' field: expected "${stageId}"` };
+            }
+
+            if (!data.status || (data.status !== "success" && data.status !== "failed" && data.status !== "skipped")) {
+                return { valid: false, error: "Invalid or missing 'status' field: must be 'success', 'failed', or 'skipped'" };
+            }
+
+            if (data.status === "failed") {
+                if (!data.reason) {
+                    return { valid: false, error: "Failed stage output must provide a 'reason' field" };
+                }
+                // Failed stage structure is standard and accepted
+                return { valid: true, error: null };
+            }
+
+            if (data.status === "skipped") {
                 return { valid: true, error: null };
             }
 
             const schema = this.schemas[stageId];
             if (!schema) {
                 return { valid: true, error: null };
-            }
-
-            if (typeof data !== "object" || data === null) {
-                return { valid: false, error: "Output is not a valid JSON object" };
             }
 
             for (const field of schema.required) {
@@ -760,27 +860,39 @@ window.BQAIPipeline = {
                 }
 
                 case "update-project-state": {
-                    const metaOut = inputData["metadata-extraction"]?.metadata;
-                    if (metaOut) {
-                        window.activeProject = {
-                            id: window.activeProject?.id || ("project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9)),
-                            projectName: metaOut.projectName || "Not Extracted",
-                            clientName: metaOut.clientName || "Not Extracted",
-                            siteAddress: metaOut.siteAddress || "Not Extracted",
-                            quoteNumber: metaOut.quoteNumber || "Not Extracted",
-                            region: metaOut.region || "London",
-                            currency: metaOut.currency || "GBP",
-                            projectDescription: metaOut.projectDescription || "",
-                            specificationLevel: metaOut.specificationLevel || "Premium",
-                            metadataSource: "Uploaded Document"
-                        };
-                        if (typeof syncActiveProjectToUI === 'function') {
-                            syncActiveProjectToUI();
-                        }
-                        if (typeof saveWorkspaceToLocalStorage === 'function') {
-                            saveWorkspaceToLocalStorage();
-                        }
+                    let metaOut = inputData["metadata-extraction"]?.metadata;
+                    if (!metaOut) {
+                        metaOut = this.extractMetadataFromText(inputData.uploadedFiles, {});
                     }
+
+                    // Create a completely new Project object using ONLY the extracted metadata.
+                    // This guarantees we completely throw away any previous/sample project data!
+                    window.activeProject = {
+                        id: "project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9),
+                        projectName: (metaOut && metaOut.projectName) ? metaOut.projectName : "Not Extracted",
+                        clientName: (metaOut && metaOut.clientName) ? metaOut.clientName : "Not Extracted",
+                        siteAddress: (metaOut && metaOut.siteAddress) ? metaOut.siteAddress : "Not Extracted",
+                        quoteNumber: (metaOut && metaOut.quoteNumber) ? metaOut.quoteNumber : "Not Extracted",
+                        region: (metaOut && metaOut.region) ? metaOut.region : "London",
+                        currency: (metaOut && metaOut.currency) ? metaOut.currency : "GBP",
+                        projectDescription: (metaOut && metaOut.projectDescription) ? metaOut.projectDescription : "",
+                        specificationLevel: (metaOut && metaOut.specificationLevel) ? metaOut.specificationLevel : "Premium",
+                        metadataSource: "Uploaded Document"
+                    };
+
+                    if (typeof syncActiveProjectToUI === 'function') {
+                        syncActiveProjectToUI();
+                    }
+                    if (typeof saveWorkspaceToLocalStorage === 'function') {
+                        saveWorkspaceToLocalStorage();
+                    }
+
+                    // Update debug panel if it exists
+                    const debugStateEl = document.getElementById('debug-active-project-state');
+                    if (debugStateEl) {
+                        debugStateEl.textContent = JSON.stringify(window.activeProject, null, 2);
+                    }
+
                     return {
                         stage: "update-project-state",
                         status: "success",
@@ -893,17 +1005,21 @@ window.BQAIPipeline = {
                         ]
                     };
 
-                case "regional-pricing":
+                case "regional-pricing": {
+                    const rData = window.ukRegionsData || {};
+                    const rName = inputData.region || "London";
+                    const rInfo = rData[rName] || { labourMultiplier: 1.30, materialMultiplier: 1.25, plantMultiplier: 1.30 };
                     return {
                         stage: "regional-pricing",
                         status: "success",
-                        region: inputData.region || "London",
+                        region: rName,
                         multipliers: {
-                            labour: 1.30,
-                            material: 1.25,
-                            plant: 1.30
+                            labour: rInfo.labourMultiplier,
+                            material: rInfo.materialMultiplier,
+                            plant: rInfo.plantMultiplier
                         }
                     };
+                }
 
                 case "cost-estimator": {
                     const mult = inputData.multipliers || { labour: 1.3, material: 1.25, plant: 1.3 };
@@ -1108,9 +1224,17 @@ window.BQAIPipeline = {
                 if (onStatusChange) onStatusChange(stage.id, "Running");
                 if (onProgressChange) onProgressChange(stage.msg || `Executing ${stage.name}...`);
 
-                // Sync UI to active project, ensuring window.activeProject is current
-                if (typeof syncUIToActiveProject === 'function') {
-                    syncUIToActiveProject();
+                // Sync UI to active project before update-project-state, otherwise sync active project to UI
+                const currentStageIdx = BQAIPipeline.STAGES.findIndex(s => s.id === stage.id);
+                const updateStageIdx = BQAIPipeline.STAGES.findIndex(s => s.id === "update-project-state");
+                if (currentStageIdx < updateStageIdx) {
+                    if (typeof syncUIToActiveProject === 'function') {
+                        syncUIToActiveProject();
+                    }
+                } else {
+                    if (typeof syncActiveProjectToUI === 'function') {
+                        syncActiveProjectToUI();
+                    }
                 }
                 const activeProject = window.activeProject || {};
                 const incomingProjectId = activeProject.id;

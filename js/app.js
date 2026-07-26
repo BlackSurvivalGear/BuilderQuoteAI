@@ -305,6 +305,7 @@ const ukRegionsData = {
         practices: "Local aggregate sourcing, high-density brickwork"
     }
 };
+window.ukRegionsData = ukRegionsData;
 
 const defaultProviders = [
     { id: 'openai', name: 'OpenAI', logo: 'brain-circuit', enabled: false, apiKey: '', defaultModel: 'gpt-4o-mini', models: ['gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini'] },
@@ -520,6 +521,12 @@ function syncActiveProjectToUI() {
     if (specSel && proj.specificationLevel) {
         specSel.value = proj.specificationLevel;
         activeSpec = proj.specificationLevel;
+    }
+
+    // Update active project debug panel if it exists
+    const debugStateEl = document.getElementById('debug-active-project-state');
+    if (debugStateEl) {
+        debugStateEl.textContent = JSON.stringify(proj, null, 2);
     }
 }
 
