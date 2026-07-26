@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Improve Description
+# QuantisAI Action Prompt – Improve Description
 
 ## ROLE
 

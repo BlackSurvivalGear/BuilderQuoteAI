@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Suggest Labour
+# QuantisAI Action Prompt – Suggest Labour
 
 ## ROLE
 

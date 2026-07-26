@@ -1,4 +1,4 @@
-# BuilderQuoteAI Action Prompt – Scope of Works
+# QuantisAI Action Prompt – Scope of Works
 
 ## ROLE
 
