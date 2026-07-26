@@ -104,18 +104,18 @@ window.BQAIPipeline = {
     STAGES: [
         { id: "upload-documents", name: "Upload Documents", promptFile: null, msg: "Reading construction drawings..." },
         { id: "ocr", name: "OCR", promptFile: null, msg: "Extracting document texts..." },
-        { id: "document-intelligence", name: "Metadata Extraction", promptFile: "document-intelligence.md", msg: "Extracting project metadata..." },
-        { id: "page-processing", name: "Page Processing", promptFile: null, msg: "Analyzing page structure..." },
+        { id: "metadata-extraction", name: "Metadata Extraction", promptFile: "document-intelligence.md", msg: "Extracting project metadata..." },
+        { id: "update-project-state", name: "Replace Active Project State", promptFile: null, msg: "Updating active project state..." },
+        { id: "validation", name: "Validation", promptFile: null, msg: "Validating financial totals..." },
         { id: "document-classification", name: "Document Classification", promptFile: "trade-classifier.md", msg: "Categorizing tender files..." },
+        { id: "document-intelligence", name: "Document Intelligence", promptFile: "document-intelligence.md", msg: "Analyzing project intelligence..." },
         { id: "drawing-interpreter", name: "Drawing Detection", promptFile: "drawing-interpreter.md", msg: "Detecting visible structural nodes..." },
-        { id: "boq-generator", name: "BOQ Extraction", promptFile: "boq-generator.md", msg: "Extracting Bill of Quantities..." },
-        { id: "quantity-surveyor", name: "Quantity Take-off", promptFile: "quantity-surveyor.md", msg: "Measuring physical dimensions..." },
+        { id: "boq-generator", name: "BOQ Generation", promptFile: "boq-generator.md", msg: "Extracting Bill of Quantities..." },
+        { id: "quantity-surveyor", name: "Quantity Survey", promptFile: "quantity-surveyor.md", msg: "Measuring physical dimensions..." },
+        { id: "cost-estimator", name: "Cost Estimation", promptFile: "cost-estimator.md", msg: "Pricing materials, labor, plant..." },
         { id: "material-analysis", name: "Material Analysis", promptFile: null, msg: "Analyzing material schedule..." },
         { id: "labour-analysis", name: "Labour Analysis", promptFile: null, msg: "Analyzing craft hours..." },
-        { id: "plant-analysis", name: "Plant Analysis", promptFile: null, msg: "Analyzing equipment hire..." },
-        { id: "cost-estimator", name: "Cost Estimation", promptFile: "cost-estimator.md", msg: "Pricing materials, labor, plant..." },
-        { id: "validation", name: "Validation", promptFile: null, msg: "Validating financial totals..." },
-        { id: "quotation-generator", name: "Final Estimate", promptFile: "quotation-generator.md", msg: "Packaging standard deliverables..." }
+        { id: "quotation-generator", name: "Final Report", promptFile: "quotation-generator.md", msg: "Packaging standard deliverables..." }
     ],
 
     // Active pipeline states
@@ -172,6 +172,24 @@ window.BQAIPipeline = {
                     for (const f of req) {
                         if (!(f in data.metadata)) return `metadata is missing required field: "${f}"`;
                     }
+                    return null;
+                }
+            },
+            "metadata-extraction": {
+                required: ["stage", "status", "metadata"],
+                validate(data) {
+                    if (typeof data.metadata !== "object" || data.metadata === null) return "metadata must be an object";
+                    const req = ["projectName", "clientName", "siteAddress", "quoteNumber", "region", "currency", "projectDescription", "specificationLevel"];
+                    for (const f of req) {
+                        if (!(f in data.metadata)) return `metadata is missing required field: "${f}"`;
+                    }
+                    return null;
+                }
+            },
+            "update-project-state": {
+                required: ["stage", "status", "project"],
+                validate(data) {
+                    if (typeof data.project !== "object" || data.project === null) return "project must be an object";
                     return null;
                 }
             },
@@ -311,18 +329,16 @@ window.BQAIPipeline = {
                 return { valid: false, error: `Payload is not valid JSON: ${err.message}` };
             }
 
-            // Check for undefined values in the inputData root keys
-            for (const [key, val] of Object.entries(inputData)) {
-                if (val === undefined) {
-                    return { valid: false, error: `Required field "${key}" has an undefined value` };
-                }
+            // Required basic project fields from the Project object itself
+            const proj = inputData.project;
+            if (!proj || typeof proj !== 'object') {
+                return { valid: false, error: "Current Project object is missing from the payload" };
             }
 
-            // Required basic project fields
             const requiredFields = ["projectName", "clientName", "siteAddress", "quoteNumber", "region"];
             for (const field of requiredFields) {
-                if (!(field in inputData) || inputData[field] === undefined || inputData[field] === null) {
-                    return { valid: false, error: `Required field "${field}" is missing or undefined` };
+                if (!(field in proj) || proj[field] === undefined || proj[field] === null) {
+                    return { valid: false, error: `Required Project field "${field}" is missing or undefined` };
                 }
             }
 
@@ -340,9 +356,16 @@ window.BQAIPipeline = {
                 if (files.length === 0) {
                     return { valid: false, error: "No uploaded files found in context" };
                 }
-                const hasExtractedText = files.some(f => f.extractedText && f.extractedText.trim().length > 0);
-                if (!hasExtractedText && files.some(f => f.name.endsWith('.pdf') || f.name.endsWith('.txt'))) {
-                    return { valid: false, error: "File extraction failed or extracted text is empty for the uploaded documents" };
+
+                // Only enforce extractedText check if a live AI provider is configured and active
+                const activeProv = window.getBQAIEngineProvider ? window.getBQAIEngineProvider() : null;
+                const isLive = activeProv && activeProv.enabled && activeProv.apiKey && activeProv.apiKey.trim().length >= 5;
+
+                if (isLive) {
+                    const hasExtractedText = files.some(f => f.extractedText && f.extractedText.trim().length > 0);
+                    if (!hasExtractedText && files.some(f => f.name.endsWith('.pdf') || f.name.endsWith('.txt'))) {
+                        return { valid: false, error: "File extraction failed or extracted text is empty for the uploaded documents" };
+                    }
                 }
             }
 
@@ -660,23 +683,36 @@ window.BQAIPipeline = {
 
         extractMetadataFromText(uploadedFiles, defaults) {
             let metadata = {
-                projectName: defaults.projectName || "Unknown",
-                clientName: defaults.clientName || "Not Supplied",
-                siteAddress: defaults.siteAddress || "Awaiting Information",
-                quoteNumber: defaults.quoteNumber || "Awaiting Information",
-                projectDescription: defaults.projectDescription || "",
-                region: defaults.region || "London"
+                projectName: "Not Extracted",
+                clientName: "Not Extracted",
+                siteAddress: "Not Extracted",
+                quoteNumber: "Not Extracted",
+                projectDescription: "",
+                region: "London",
+                currency: "GBP",
+                specificationLevel: "Premium"
             };
 
             for (const file of uploadedFiles || []) {
                 if (file.extractedText) {
                     const text = file.extractedText;
-                    const projMatch = text.match(/Project\s*Name:\s*([^.\n]+)/i);
-                    const clientMatch = text.match(/Client\s*Name:\s*([^.\n]+)/i);
-                    const siteMatch = text.match(/Site\s*Address:\s*([^.\n]+)/i);
-                    const quoteMatch = text.match(/Quote\s*Number:\s*([^.\n]+)/i);
-                    const descMatch = text.match(/Project\s*Description:\s*([^.\n]+)/i);
-                    const regionMatch = text.match(/Region:\s*([^.\n]+)/i);
+
+                    // Match Project Name
+                    const projMatch = text.match(/Project\s*(?:Name)?\s*:\s*([^.\n\r]+)/i);
+                    // Match Client Name
+                    const clientMatch = text.match(/(?:Client|Client\s*Name)\s*:\s*([^.\n\r]+)/i);
+                    // Match Site Address or Address
+                    const siteMatch = text.match(/(?:Site\s*Address|Address)\s*:\s*([^.\n\r]+)/i);
+                    // Match Project Number or Quote Number or Project No or Quote No
+                    const quoteMatch = text.match(/(?:Quote\s*Number|Project\s*Number|Quote\s*No|Project\s*No)\s*:\s*([^.\n\r]+)/i);
+                    // Match Project Description
+                    const descMatch = text.match(/(?:Project\s*Description|Description)\s*:\s*([^.\n\r]+)/i);
+                    // Match Region
+                    const regionMatch = text.match(/Region\s*:\s*([^.\n\r]+)/i);
+                    // Match Currency
+                    const currencyMatch = text.match(/Currency\s*:\s*([^.\n\r]+)/i);
+                    // Match Spec Level
+                    const specMatch = text.match(/(?:Specification\s*Level|Specification|Spec\s*Level)\s*:\s*([^.\n\r]+)/i);
 
                     if (projMatch) metadata.projectName = projMatch[1].trim();
                     if (clientMatch) metadata.clientName = clientMatch[1].trim();
@@ -684,6 +720,8 @@ window.BQAIPipeline = {
                     if (quoteMatch) metadata.quoteNumber = quoteMatch[1].trim();
                     if (descMatch) metadata.projectDescription = descMatch[1].trim();
                     if (regionMatch) metadata.region = regionMatch[1].trim();
+                    if (currencyMatch) metadata.currency = currencyMatch[1].trim();
+                    if (specMatch) metadata.specificationLevel = specMatch[1].trim();
                 }
             }
             return metadata;
@@ -703,34 +741,81 @@ window.BQAIPipeline = {
                         }))
                     };
 
-                case "document-classification": {
+                case "metadata-extraction": {
                     const extracted = this.extractMetadataFromText(inputData.uploadedFiles, inputData);
+                    return {
+                        stage: "metadata-extraction",
+                        status: "success",
+                        metadata: {
+                            projectName: extracted.projectName,
+                            clientName: extracted.clientName,
+                            siteAddress: extracted.siteAddress,
+                            quoteNumber: extracted.quoteNumber,
+                            region: extracted.region,
+                            currency: extracted.currency,
+                            projectDescription: extracted.projectDescription,
+                            specificationLevel: extracted.specificationLevel
+                        }
+                    };
+                }
+
+                case "update-project-state": {
+                    const metaOut = inputData["metadata-extraction"]?.metadata;
+                    if (metaOut) {
+                        window.activeProject = {
+                            id: window.activeProject?.id || ("project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9)),
+                            projectName: metaOut.projectName || "Not Extracted",
+                            clientName: metaOut.clientName || "Not Extracted",
+                            siteAddress: metaOut.siteAddress || "Not Extracted",
+                            quoteNumber: metaOut.quoteNumber || "Not Extracted",
+                            region: metaOut.region || "London",
+                            currency: metaOut.currency || "GBP",
+                            projectDescription: metaOut.projectDescription || "",
+                            specificationLevel: metaOut.specificationLevel || "Premium",
+                            metadataSource: "Uploaded Document"
+                        };
+                        if (typeof syncActiveProjectToUI === 'function') {
+                            syncActiveProjectToUI();
+                        }
+                        if (typeof saveWorkspaceToLocalStorage === 'function') {
+                            saveWorkspaceToLocalStorage();
+                        }
+                    }
+                    return {
+                        stage: "update-project-state",
+                        status: "success",
+                        project: window.activeProject
+                    };
+                }
+
+                case "document-classification": {
+                    const proj = window.activeProject || {};
                     return {
                         stage: "document-classification",
                         status: "success",
                         classification: "Builder Quote",
                         metadata: {
-                            projectName: extracted.projectName,
-                            clientName: extracted.clientName,
-                            siteAddress: extracted.siteAddress,
-                            quoteNumber: extracted.quoteNumber
+                            projectName: proj.projectName || "Not Extracted",
+                            clientName: proj.clientName || "Not Extracted",
+                            siteAddress: proj.siteAddress || "Not Extracted",
+                            quoteNumber: proj.quoteNumber || "Not Extracted"
                         }
                     };
                 }
 
                 case "document-intelligence": {
-                    const extracted = this.extractMetadataFromText(inputData.uploadedFiles, inputData);
+                    const proj = window.activeProject || {};
                     return {
                         stage: "document-intelligence",
                         status: "success",
                         confidence: 0.98,
                         project: {
-                            projectName: extracted.projectName,
-                            clientName: extracted.clientName,
-                            siteAddress: extracted.siteAddress,
-                            quoteNumber: extracted.quoteNumber,
-                            projectDescription: extracted.projectDescription,
-                            region: extracted.region
+                            projectName: proj.projectName || "Not Extracted",
+                            clientName: proj.clientName || "Not Extracted",
+                            siteAddress: proj.siteAddress || "Not Extracted",
+                            quoteNumber: proj.quoteNumber || "Not Extracted",
+                            projectDescription: proj.projectDescription || "",
+                            region: proj.region || "London"
                         },
                         documents: (inputData.uploadedFiles || []).map(f => ({
                             name: f.name,
@@ -749,15 +834,17 @@ window.BQAIPipeline = {
                     };
                 }
 
-                case "validation":
+                case "validation": {
+                    const proj = window.activeProject || {};
                     return {
                         stage: "validation",
                         status: "success",
-                        projectName: inputData.projectName || "Unknown",
-                        clientName: inputData.clientName || "Not Supplied",
-                        siteAddress: inputData.siteAddress || "Awaiting Information",
-                        quoteNumber: inputData.quoteNumber || "Awaiting Information"
+                        projectName: proj.projectName || "Not Extracted",
+                        clientName: proj.clientName || "Not Extracted",
+                        siteAddress: proj.siteAddress || "Not Extracted",
+                        quoteNumber: proj.quoteNumber || "Not Extracted"
                     };
+                }
 
                 case "drawing-interpreter":
                     return {
@@ -1021,31 +1108,29 @@ window.BQAIPipeline = {
                 if (onStatusChange) onStatusChange(stage.id, "Running");
                 if (onProgressChange) onProgressChange(stage.msg || `Executing ${stage.name}...`);
 
-                // Override active project fields with the extracted metadata from document-intelligence if it is completed
-                let activeProject = {
-                    projectName: document.getElementById('project-name')?.value || "Unknown",
-                    clientName: document.getElementById('project-client')?.value || "Not Supplied",
-                    siteAddress: document.getElementById('project-site')?.value || "Awaiting Information",
-                    quoteNumber: document.getElementById('project-quote-no')?.value || "Awaiting Information",
-                    region: document.getElementById('project-region')?.value || "London",
-                    projectDescription: document.getElementById('workspace-project-description')?.value || ""
-                };
+                // Sync UI to active project, ensuring window.activeProject is current
+                if (typeof syncUIToActiveProject === 'function') {
+                    syncUIToActiveProject();
+                }
+                const activeProject = window.activeProject || {};
+                const incomingProjectId = activeProject.id;
 
-                const docIntelOutput = currentOutputs["document-intelligence"];
-                if (docIntelOutput && docIntelOutput.project) {
-                    const proj = docIntelOutput.project;
-                    activeProject.projectName = proj.projectName || activeProject.projectName;
-                    activeProject.clientName = proj.clientName || activeProject.clientName;
-                    activeProject.siteAddress = proj.siteAddress || activeProject.siteAddress;
-                    activeProject.quoteNumber = proj.quoteNumber || activeProject.quoteNumber;
-                    activeProject.projectDescription = proj.projectDescription || activeProject.projectDescription;
-                    if (proj.region) {
-                        activeProject.region = proj.region;
-                    }
+                // Trace developer logs at specific transitions
+                if (stage.id === "metadata-extraction") {
+                    console.log("=== METADATA EXTRACTION START ===");
+                    console.log("Previous Project State:", JSON.stringify(activeProject, null, 2));
+                    const extracted = BQAIPipeline.AIRunner.extractMetadataFromText(currentFiles, {});
+                    console.log("OCR Extracted Metadata:", JSON.stringify(extracted, null, 2));
                 }
 
-                // Input formulation: upstream outputs are context
+                if (stage.id === "validation") {
+                    console.log("=== VALIDATION START ===");
+                    console.log("Validation Input Project State:", JSON.stringify(activeProject, null, 2));
+                }
+
+                // Input formulation: upstream outputs are context. Single Project object is passed directly.
                 const inputPayload = {
+                    project: activeProject,
                     projectName: activeProject.projectName,
                     clientName: activeProject.clientName,
                     siteAddress: activeProject.siteAddress,
@@ -1071,6 +1156,13 @@ window.BQAIPipeline = {
                         reason: `Pre-request Input Validation Failed: ${preValidation.error}`
                     };
                     BQAIPipeline.Persistence.saveStages(currentOutputs);
+
+                    if (stage.id === "metadata-extraction") {
+                        if (onProgressChange) onProgressChange(`CRITICAL FAILURE: ${stage.name} input validation failed. Halting pipeline.`);
+                        BQAIPipeline.state.isRunning = false;
+                        BQAIPipeline.state.activeStageIdx = -1;
+                        return false;
+                    }
                     continue;
                 }
 
@@ -1122,6 +1214,13 @@ window.BQAIPipeline = {
                     };
                     BQAIPipeline.Persistence.saveStages(currentOutputs);
 
+                    if (stage.id === "metadata-extraction") {
+                        if (onProgressChange) onProgressChange(`CRITICAL FAILURE: ${stage.name} execution failed. Halting pipeline.`);
+                        BQAIPipeline.state.isRunning = false;
+                        BQAIPipeline.state.activeStageIdx = -1;
+                        return false;
+                    }
+
                     if (onProgressChange) onProgressChange(`Stage ${stage.name} failed. Continuing pipeline...`);
                     continue;
                 }
@@ -1141,6 +1240,13 @@ window.BQAIPipeline = {
                     };
                     BQAIPipeline.Persistence.saveStages(currentOutputs);
 
+                    if (stage.id === "metadata-extraction") {
+                        if (onProgressChange) onProgressChange(`CRITICAL FAILURE: ${stage.name} schema validation failed. Halting pipeline.`);
+                        BQAIPipeline.state.isRunning = false;
+                        BQAIPipeline.state.activeStageIdx = -1;
+                        return false;
+                    }
+
                     if (onProgressChange) onProgressChange(`Validation Failed: ${validationResult.error}. Continuing pipeline...`);
                     continue;
                 }
@@ -1148,6 +1254,35 @@ window.BQAIPipeline = {
                 // Save completed stage
                 currentOutputs[stage.id] = result.data;
                 BQAIPipeline.Persistence.saveStages(currentOutputs);
+
+                // Run side-effects of replacing project state if update-project-state is completed
+                if (stage.id === "update-project-state" && result.data && result.data.project) {
+                    const updatedProj = result.data.project;
+                    window.activeProject = updatedProj;
+                    if (typeof syncActiveProjectToUI === 'function') {
+                        syncActiveProjectToUI();
+                    }
+                    if (typeof saveWorkspaceToLocalStorage === 'function') {
+                        saveWorkspaceToLocalStorage();
+                    }
+                }
+
+                // Trace developer logs after each stage is completed/processed
+                const outgoingProject = window.activeProject || {};
+                console.log(`=== STAGE COMPLETED: ${stage.name} ===`);
+                console.log(`Incoming Project ID: ${incomingProjectId}`);
+                console.log(`Outgoing Project ID: ${outgoingProject.id}`);
+                console.log(`Project Name: ${outgoingProject.projectName}`);
+                console.log(`Client Name: ${outgoingProject.clientName}`);
+                console.log(`Quote Number: ${outgoingProject.quoteNumber}`);
+                console.log(`Metadata Source: ${outgoingProject.metadataSource}`);
+                console.log(`==========================================`);
+
+                if (stage.id === "update-project-state") {
+                    console.log("=== UPDATE PROJECT STATE COMPLETED ===");
+                    console.log("Metadata Extraction Output:", JSON.stringify(currentOutputs["metadata-extraction"], null, 2));
+                    console.log("Updated Project State:", JSON.stringify(window.activeProject, null, 2));
+                }
 
                 // Add Developer Logs
                 this.addLog(stage.id, startStageTime, Date.now(), activeProv, true, "✓ Schema Valid", retryCount, result.tokens, result.model);

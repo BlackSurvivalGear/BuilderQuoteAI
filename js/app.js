@@ -478,6 +478,69 @@ function switchWorkspaceTab(tab, updateHistory = true) {
     initLucide();
 }
 
+window.activeProject = null;
+
+function syncActiveProjectToUI() {
+    if (!window.activeProject) return;
+    const proj = window.activeProject;
+
+    const fields = {
+        'project-name': proj.projectName || '',
+        'project-client': proj.clientName || '',
+        'project-site': proj.siteAddress || '',
+        'project-quote-no': proj.quoteNumber || '',
+        'workspace-project-description': proj.projectDescription || ''
+    };
+
+    for (const [id, val] of Object.entries(fields)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = val === "Not Extracted" ? "" : val;
+        }
+    }
+
+    const curSel = document.getElementById('project-currency');
+    if (curSel && proj.currency) {
+        curSel.value = proj.currency;
+        currentCurrency = proj.currency;
+    }
+
+    const regSel = document.getElementById('project-region');
+    if (regSel && proj.region) {
+        const options = Array.from(regSel.options);
+        const matchedOpt = options.find(o => o.value.toLowerCase() === proj.region.toLowerCase());
+        if (matchedOpt) {
+            regSel.value = matchedOpt.value;
+        } else {
+            regSel.value = proj.region;
+        }
+    }
+
+    const specSel = document.getElementById('workspace-project-specification');
+    if (specSel && proj.specificationLevel) {
+        specSel.value = proj.specificationLevel;
+        activeSpec = proj.specificationLevel;
+    }
+}
+
+function syncUIToActiveProject() {
+    if (!window.activeProject) {
+        window.activeProject = {
+            id: "project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9),
+            metadataSource: "User Input"
+        };
+    }
+    const proj = window.activeProject;
+    proj.projectName = document.getElementById('project-name')?.value || "Not Extracted";
+    proj.clientName = document.getElementById('project-client')?.value || "Not Extracted";
+    proj.siteAddress = document.getElementById('project-site')?.value || "Not Extracted";
+    proj.quoteNumber = document.getElementById('project-quote-no')?.value || "Not Extracted";
+    proj.region = document.getElementById('project-region')?.value || "London";
+    proj.currency = document.getElementById('project-currency')?.value || "GBP";
+    proj.projectDescription = document.getElementById('workspace-project-description')?.value || "";
+    proj.specificationLevel = document.getElementById('workspace-project-specification')?.value || "Premium";
+}
+
 // Local Storage initialization & restoration
 function initWorkspaceData() {
     const savedData = localStorage.getItem('builder_quote_data');
@@ -486,34 +549,22 @@ function initWorkspaceData() {
             const data = JSON.parse(savedData);
             boqItems = data.boqItems || [];
 
-            // Restore Project Info fields
-            if (data.projectInfo) {
+            if (data.activeProject) {
+                window.activeProject = data.activeProject;
+            } else if (data.projectInfo) {
                 const info = data.projectInfo;
-                document.getElementById('project-name').value = info.name || '';
-                document.getElementById('project-client').value = info.client || '';
-                document.getElementById('project-site').value = info.site || '';
-                document.getElementById('project-quote-no').value = info.quoteNo || '';
-                document.getElementById('project-date').value = info.date || '';
-
-                const curSel = document.getElementById('project-currency');
-                if (curSel) {
-                    curSel.value = info.currency || 'GBP';
-                    currentCurrency = info.currency || 'GBP';
-                }
-                const regSel = document.getElementById('project-region');
-                if (regSel) {
-                    regSel.value = info.region || 'London';
-                }
-                const specSel = document.getElementById('workspace-project-specification');
-                if (specSel && info.specification) {
-                    specSel.value = info.specification;
-                    activeSpec = info.specification;
-                }
-            }
-
-            // Restore prompt / specification
-            if (data.projectDescription) {
-                document.getElementById('workspace-project-description').value = data.projectDescription;
+                window.activeProject = {
+                    id: info.id || "project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9),
+                    projectName: info.name || "Not Extracted",
+                    clientName: info.client || "Not Extracted",
+                    siteAddress: info.site || "Not Extracted",
+                    quoteNumber: info.quoteNo || "Not Extracted",
+                    region: info.region || "London",
+                    currency: info.currency || "GBP",
+                    projectDescription: data.projectDescription || "",
+                    specificationLevel: info.specification || "Premium",
+                    metadataSource: info.metadataSource || "User Input"
+                };
             }
 
             // Restore uploaded files
@@ -524,31 +575,51 @@ function initWorkspaceData() {
             }
             window.uploadedFiles = uploadedFiles;
 
+            syncActiveProjectToUI();
+
         } catch (e) {
             console.error('Failed to parse local storage data:', e);
         }
     }
+
+    if (!window.activeProject) {
+        window.activeProject = {
+            id: "project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9),
+            projectName: "Not Extracted",
+            clientName: "Not Extracted",
+            siteAddress: "Not Extracted",
+            quoteNumber: "Not Extracted",
+            region: "London",
+            currency: "GBP",
+            projectDescription: "",
+            specificationLevel: "Premium",
+            metadataSource: "Default Blank"
+        };
+        syncActiveProjectToUI();
+    }
 }
 
 function saveWorkspaceToLocalStorage() {
+    syncUIToActiveProject();
     const projectInfo = {
-        name: document.getElementById('project-name').value,
-        client: document.getElementById('project-client').value,
-        site: document.getElementById('project-site').value,
-        quoteNo: document.getElementById('project-quote-no').value,
-        date: document.getElementById('project-date').value,
-        currency: document.getElementById('project-currency').value,
-        region: document.getElementById('project-region') ? document.getElementById('project-region').value : 'London',
-        specification: document.getElementById('workspace-project-specification') ? document.getElementById('workspace-project-specification').value : 'Premium'
+        id: window.activeProject.id,
+        name: window.activeProject.projectName,
+        client: window.activeProject.clientName,
+        site: window.activeProject.siteAddress,
+        quoteNo: window.activeProject.quoteNumber,
+        date: document.getElementById('project-date')?.value || new Date().toISOString().substring(0, 10),
+        currency: window.activeProject.currency,
+        region: window.activeProject.region,
+        specification: window.activeProject.specificationLevel,
+        metadataSource: window.activeProject.metadataSource
     };
-
-    const projectDescription = document.getElementById('workspace-project-description').value;
 
     const dataPayload = {
         projectInfo,
         boqItems,
-        projectDescription,
-        uploadedFiles
+        projectDescription: window.activeProject.projectDescription,
+        uploadedFiles,
+        activeProject: window.activeProject
     };
 
     localStorage.setItem('builder_quote_data', JSON.stringify(dataPayload));
@@ -1313,6 +1384,26 @@ function ingestFilesWithProgress(files) {
                 uploadedFiles.push(...processed);
             }
 
+            // Generate a completely new unique Project ID and reset details to "Not Extracted" on new upload
+            window.activeProject = {
+                id: "project-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9),
+                projectName: "Not Extracted",
+                clientName: "Not Extracted",
+                siteAddress: "Not Extracted",
+                quoteNumber: "Not Extracted",
+                region: "London",
+                currency: "GBP",
+                projectDescription: "",
+                specificationLevel: "Premium",
+                metadataSource: "Uploaded Document"
+            };
+            boqItems = []; // Clear BOQ items
+            if (window.BQAIPipeline) {
+                BQAIPipeline.Persistence.clearAll(); // Clear pipeline checkpoints
+                BQAIPipeline.state.stageOutputs = {};
+            }
+            syncActiveProjectToUI();
+
             showToast('Files Processed', `Loaded ${files.length} project document(s). Pre-parsing structures...`);
             renderUploadedFilesList();
             if (typeof renderDocumentRegisterAndReadiness === 'function') {
@@ -1635,7 +1726,19 @@ function replaceUploadedFile(id) {
 function loadSampleProjectDescription() {
     const desc = document.getElementById('workspace-project-description');
     if (desc) {
-        desc.value = `Tender specifications for Mayfair duplex residential refurb:\n- Ground Floor: Demolition of internal structural masonry partitions, supply and installation of steel universal columns (203x203x46 UC).\n- First Floor: Install structural stud partition walls, skim coat plaster, double insulated plasterboards.\n- Electrical sub-circuits: 12 LED downlights, 6 double sockets, regional utility certificate audit.\n- Flooring: Underfloor insulation, dry screed flooring base, engineered premium Oak timber floorboards throughout.`;
+        window.activeProject = {
+            id: "project-sample-" + Date.now(),
+            projectName: "Mayfair Duplex Refurbishment",
+            clientName: "Arthur Henderson",
+            siteAddress: "12 Mayfair Gardens, London",
+            quoteNumber: "BQ-2024-216",
+            region: "London",
+            currency: "GBP",
+            projectDescription: `Tender specifications for Mayfair duplex residential refurb:\n- Ground Floor: Demolition of internal structural masonry partitions, supply and installation of steel universal columns (203x203x46 UC).\n- First Floor: Install structural stud partition walls, skim coat plaster, double insulated plasterboards.\n- Electrical sub-circuits: 12 LED downlights, 6 double sockets, regional utility certificate audit.\n- Flooring: Underfloor insulation, dry screed flooring base, engineered premium Oak timber floorboards throughout.`,
+            specificationLevel: "Premium",
+            metadataSource: "Sample"
+        };
+        syncActiveProjectToUI();
 
         uploadedFiles = [
             { id: 'f-1', name: 'architectural_drawings_rev_B.pdf', size: 12458900, formattedSize: '11.88 MB', type: 'drawing', pages: 8, processingStatus: 'Analysis Complete', confidenceScore: 98, classification: "Architectural Drawings", revision: "Rev B", drawingNumber: "A101", extractedText: "Project Name: Mayfair Duplex Refurbishment. Client Name: Arthur Henderson. Site Address: 12 Mayfair Gardens, London. Quote Number: BQ-2024-216." },
@@ -3364,36 +3467,10 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
             const stgIdx = BQAIPipeline.STAGES.findIndex(st => st.id === stageId);
             animateConfidenceAtStep(stgIdx);
 
-            // Automatically populate Project Information panel from Document Intelligence
-            if (stageId === "document-intelligence" && state === "Completed" && data && data.project) {
-                const proj = data.project;
-                if (proj.projectName && proj.projectName !== "Unknown" && proj.projectName !== "Not Supplied") {
-                    document.getElementById('project-name').value = proj.projectName;
-                }
-                if (proj.clientName && proj.clientName !== "Not Supplied") {
-                    document.getElementById('project-client').value = proj.clientName;
-                }
-                if (proj.siteAddress && proj.siteAddress !== "Awaiting Information") {
-                    document.getElementById('project-site').value = proj.siteAddress;
-                }
-                if (proj.quoteNumber && proj.quoteNumber !== "Awaiting Information") {
-                    document.getElementById('project-quote-no').value = proj.quoteNumber;
-                }
-                if (proj.region) {
-                    const regSel = document.getElementById('project-region');
-                    if (regSel) {
-                        const options = Array.from(regSel.options);
-                        const matchedOpt = options.find(o => o.value.toLowerCase() === proj.region.toLowerCase());
-                        if (matchedOpt) {
-                            regSel.value = matchedOpt.value;
-                        }
-                    }
-                }
-                if (proj.projectDescription) {
-                    const descInput = document.getElementById('workspace-project-description');
-                    if (descInput) {
-                        descInput.value = proj.projectDescription;
-                    }
+            // Automatically populate Project Information panel from Document Intelligence or Replace Project State
+            if ((stageId === "update-project-state" || stageId === "document-intelligence") && state === "Completed") {
+                if (typeof syncActiveProjectToUI === 'function') {
+                    syncActiveProjectToUI();
                 }
                 saveWorkspaceToLocalStorage();
             }
