@@ -1,4 +1,7 @@
-/* BuilderQuoteAI - Premium JS Interaction Engine & AI Quantity Surveyor Workspace */
+/* QuantisAI - Premium JS Interaction Engine & AI Quantity Surveyor Workspace */
+
+// Initialize theme immediately to prevent screen flash
+initTheme();
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize Lucide Icons
@@ -2684,7 +2687,7 @@ function exportWorkspace(type) {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `BuilderQuoteAI_Estimate_${document.getElementById('project-quote-no').value || 'Export'}.csv`);
+        link.setAttribute("download", `QuantisAI_Estimate_${document.getElementById('project-quote-no').value || 'Export'}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2709,7 +2712,7 @@ function exportWorkspace(type) {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `BuilderQuoteAI_Payload_${projectInfo.quoteNo || 'export'}.json`);
+        downloadAnchor.setAttribute("download", `QuantisAI_Payload_${projectInfo.quoteNo || 'export'}.json`);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         document.body.removeChild(downloadAnchor);
@@ -2838,14 +2841,14 @@ function triggerWorkflowDemoAnimation() {
 }
 
 /* Fallback Logo Display Logic */
-// These globally accessible functions are invoked if the BuilderQuoteAI.png assets are missing
+// These globally accessible functions are invoked if the QuantisAI.png assets are missing
 function handleLogoError() {
     const container = document.getElementById('logo-container');
     if (container) {
         container.innerHTML = `
             <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                <span class="text-brand-gold font-black bg-brand-gold-muted px-2 py-1 rounded-lg border border-brand-gold-border text-lg font-mono">B</span>
-                BuilderQuote<span class="text-brand-gold">AI</span>
+                <span class="text-brand-gold font-black bg-brand-gold-muted px-2 py-1 rounded-lg border border-brand-gold-border text-lg font-mono">Q</span>
+                Quantis<span class="text-brand-gold">AI</span>
             </span>
         `;
     }
@@ -2856,8 +2859,8 @@ function handleFooterLogoError() {
     if (container) {
         container.innerHTML = `
             <span class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5 justify-center md:justify-start">
-                <span class="text-brand-gold font-extrabold bg-brand-gold-muted px-1.5 py-0.5 rounded border border-brand-gold-border text-sm font-mono">B</span>
-                BuilderQuote<span class="text-brand-gold">AI</span>
+                <span class="text-brand-gold font-extrabold bg-brand-gold-muted px-1.5 py-0.5 rounded border border-brand-gold-border text-sm font-mono">Q</span>
+                Quantis<span class="text-brand-gold">AI</span>
             </span>
         `;
     }
@@ -3055,7 +3058,7 @@ function animateConfidenceAtStep(stepIndex) {
 }
 
 function logDeveloperDebugInfo(info) {
-    console.log("========== BuilderQuoteAI ==========");
+    console.log("========== QuantisAI ==========");
     console.log("Project Name:", info.projectName || "Unspecified");
     console.log("Documents Uploaded:", info.docsCount || 0);
     console.log("Pages Analysed:", info.pagesCount || 0);
@@ -3692,7 +3695,7 @@ function downloadDebugReport() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `BuilderQuoteAI_Debug_Report_${report.quoteNumber}.json`);
+    downloadAnchor.setAttribute("download", `QuantisAI_Debug_Report_${report.quoteNumber}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     document.body.removeChild(downloadAnchor);
@@ -3840,7 +3843,7 @@ function renderQuotationNotAvailablePage(finalOutputs) {
                     Quotation Blocked
                 </span>
                 <h2 class="text-white text-xl font-bold uppercase tracking-tight">Quotation Not Yet Available</h2>
-                <p class="text-xs text-gray-400 mt-1">BuilderQuoteAI cannot generate a professional quotation because insufficient project information has been supplied.</p>
+                <p class="text-xs text-gray-400 mt-1">QuantisAI cannot generate a professional quotation because insufficient project information has been supplied.</p>
             </div>
 
             <!-- Current Project Status -->
@@ -4286,7 +4289,7 @@ function askLawAI() {
     setTimeout(() => {
         // Generate a beautiful, highly detailed simulated legal response matching the prompt
         let title = "Sovereign Law AI Counsel";
-        let summary = "The following advice is generated by the BuilderQuoteAI Sovereign legal engine for guidance purposes.";
+        let summary = "The following advice is generated by the QuantisAI Sovereign legal engine for guidance purposes.";
         let points = [];
         let riskLevel = "Medium Risk";
         let riskColor = "text-yellow-400 bg-yellow-950/40 border-yellow-900";
@@ -4562,4 +4565,30 @@ function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => {
         showToast("Copied to Clipboard", "AI Response has been successfully copied to your clipboard.");
     });
+}
+
+/* Theme Management (Light/Dark Mode) */
+function initTheme() {
+    const savedTheme = localStorage.getItem('quantis_theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'light') {
+        document.documentElement.classList.add('light');
+    } else if (savedTheme === 'dark') {
+        document.documentElement.classList.remove('light');
+    } else {
+        // Default to system theme
+        if (systemPrefersDark) {
+            document.documentElement.classList.remove('light');
+        } else {
+            document.documentElement.classList.add('light');
+        }
+    }
+}
+
+function toggleTheme() {
+    const isLight = document.documentElement.classList.toggle('light');
+    localStorage.setItem('quantis_theme', isLight ? 'light' : 'dark');
+    showToast('Theme Updated', `Switched to ${isLight ? 'Light' : 'Dark'} mode.`);
+    initLucide();
 }

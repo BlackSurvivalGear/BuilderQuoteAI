@@ -1,5 +1,5 @@
 /**
- * BuilderQuoteAI - Phase 2 AI Orchestration Engine (pipeline.js)
+ * QuantisAI - Phase 2 AI Orchestration Engine (pipeline.js)
  * Implements a 12-stage sequential AI pipeline, structured JSON contracts,
  * JSON validation layer, state persistence, step reruns, and developer logging.
  */

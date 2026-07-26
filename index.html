@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BuilderQuoteAI - AI Construction Estimating for Modern Builders</title>
+    <title>QuantisAI - AI Construction Estimating for Modern Builders</title>
     <meta name="description" content="Generate professional construction quotations in minutes using intelligent document analysis. Premium AI platform for contractors, builders, and consultants.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,28 +17,28 @@
                 extend: {
                     colors: {
                         brand: {
-                            matte: '#0B0B0C',
-                            graphite: '#18181C',
-                            dark: '#121214',
-                            gold: '#D4AF37',
-                            'gold-hover': '#C19E2F',
-                            'gold-muted': 'rgba(212, 175, 55, 0.15)',
-                            'gold-border': 'rgba(212, 175, 55, 0.3)',
-                            glass: 'rgba(24, 24, 28, 0.7)',
-                            'glass-border': 'rgba(255, 255, 255, 0.08)',
-                            'glass-hover': 'rgba(255, 255, 255, 0.03)',
+                            matte: 'var(--brand-matte)',
+                            graphite: 'var(--brand-graphite)',
+                            dark: 'var(--brand-dark)',
+                            gold: 'var(--brand-gold)',
+                            'gold-hover': 'var(--brand-gold-hover)',
+                            'gold-muted': 'var(--brand-gold-muted)',
+                            'gold-border': 'var(--brand-gold-border)',
+                            glass: 'var(--brand-glass)',
+                            'glass-border': 'var(--brand-glass-border)',
+                            'glass-hover': 'var(--brand-glass-hover)',
                         }
                     },
                     fontFamily: {
                         sans: ['"Plus Jakarta Sans"', 'sans-serif'],
                     },
                     backgroundImage: {
-                        'radial-glow': 'radial-gradient(circle at center, rgba(212, 175, 55, 0.12) 0%, transparent 65%)',
-                        'radial-glow-top': 'radial-gradient(circle at top, rgba(212, 175, 55, 0.15) 0%, transparent 70%)',
+                        'radial-glow': 'radial-gradient(circle at center, rgba(59, 130, 246, 0.12) 0%, transparent 65%)',
+                        'radial-glow-top': 'radial-gradient(circle at top, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
                     },
                     boxShadow: {
-                        'gold-glow': '0 0 25px -5px rgba(212, 175, 55, 0.4)',
-                        'gold-glow-sm': '0 0 15px -3px rgba(212, 175, 55, 0.25)',
+                        'gold-glow': '0 0 25px -5px rgba(59, 130, 246, 0.4)',
+                        'gold-glow-sm': '0 0 15px -3px rgba(59, 130, 246, 0.25)',
                         'glass-shadow': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
                     }
                 }
@@ -68,7 +68,7 @@
                     <a href="#" class="flex items-center gap-3 group">
                         <div id="logo-container" class="h-10 flex items-center">
                             <!-- JS will inject fallback text logo if image fails -->
-                            <img id="brand-logo" src="images/BuilderQuoteAI.png" alt="BuilderQuoteAI Logo" class="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-105" onerror="handleLogoError()">
+                            <img id="brand-logo" src="images/QuantisAI.png" alt="QuantisAI Logo" class="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-105" onerror="handleLogoError()">
                         </div>
                     </a>
                 </div>
@@ -88,6 +88,11 @@
 
                 <!-- Navigation CTAs -->
                 <div class="hidden md:flex items-center space-x-4">
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2 rounded-lg bg-brand-gold-muted border border-brand-gold-border text-brand-gold hover:bg-brand-gold hover:text-brand-matte transition-all duration-300 flex items-center justify-center" aria-label="Toggle Theme" id="desktop-theme-toggle">
+                        <i data-lucide="sun" class="w-4 h-4 dark-icon"></i>
+                        <i data-lucide="moon" class="w-4 h-4 light-icon"></i>
+                    </button>
                     <a href="#contact" class="px-5 py-2 text-sm font-semibold rounded-lg bg-transparent border border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10 hover:border-brand-gold transition-all duration-300">
                         Request Demo
                     </a>
@@ -120,6 +125,12 @@
                     AI Workspace
                 </button>
                 <div class="pt-4 pb-2 border-t border-brand-glass-border flex flex-col gap-3 px-3">
+                    <!-- Theme Toggle for Mobile -->
+                    <button onclick="toggleTheme()" class="w-full py-2.5 rounded-lg bg-brand-gold-muted border border-brand-gold-border text-brand-gold hover:bg-brand-gold hover:text-brand-matte transition-all font-semibold flex items-center justify-center gap-2" id="mobile-theme-toggle">
+                        <i data-lucide="sun" class="w-4 h-4 dark-icon"></i>
+                        <i data-lucide="moon" class="w-4 h-4 light-icon"></i>
+                        <span>Toggle Theme</span>
+                    </button>
                     <a href="#contact" class="w-full text-center py-2.5 rounded-lg bg-transparent border border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10 transition-all font-semibold">
                         Request Demo
                     </a>
@@ -272,7 +283,7 @@
                                     <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Project Description / Additional Information</label>
                                     <button onclick="loadSampleProjectDescription()" class="text-[10px] text-brand-gold hover:underline">Load Sample Project Description</button>
                                 </div>
-                                <textarea id="workspace-project-description" rows="5" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors resize-none font-sans leading-relaxed" placeholder="Describe the project details, scope of works, finishes, structural elements, heights, or any other relevant details. BuilderQuoteAI will automatically analyze this alongside your uploaded documents to build the complete quote."></textarea>
+                                <textarea id="workspace-project-description" rows="5" class="w-full bg-brand-matte border border-brand-glass-border focus:border-brand-gold text-white rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors resize-none font-sans leading-relaxed" placeholder="Describe the project details, scope of works, finishes, structural elements, heights, or any other relevant details. QuantisAI will automatically analyze this alongside your uploaded documents to build the complete quote."></textarea>
                             </div>
 
                             <!-- One-Click Premium Gold Generate Button -->
@@ -1288,7 +1299,7 @@
                                         <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
                                         <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                                         <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
-                                        <span class="text-xs text-gray-400 font-mono ml-2">builderquote-ai-pipeline</span>
+                                        <span class="text-xs text-gray-400 font-mono ml-2">quantis-ai-pipeline</span>
                                     </div>
                                     <div class="flex items-center gap-1.5">
                                         <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
@@ -1407,7 +1418,7 @@
                             <i data-lucide="star" class="w-4 h-4 fill-brand-gold"></i>
                             <i data-lucide="star" class="w-4 h-4 fill-brand-gold"></i>
                         </div>
-                        <p class="text-xs text-gray-300 italic mb-4">"BuilderQuoteAI has completely transformed our bidding volume. What used to take two weeks of manual scaling is now produced in minutes. The 14-section QS report is incredibly detailed and client-ready."</p>
+                        <p class="text-xs text-gray-300 italic mb-4">"QuantisAI has completely transformed our bidding volume. What used to take two weeks of manual scaling is now produced in minutes. The 14-section QS report is incredibly detailed and client-ready."</p>
                         <div>
                             <p class="text-xs font-bold text-white">David Fletcher, MRICS</p>
                             <p class="text-[10px] text-gray-500">Lead Surveyor, Apex Commercial Tenders</p>
@@ -1756,7 +1767,7 @@
                             The Pinnacle of AI Construction Estimating
                         </h2>
                         <p class="text-lg text-gray-300 font-light leading-relaxed">
-                            <strong class="text-brand-gold font-semibold">BuilderQuoteAI</strong> was forged to bridge the gap between traditional engineering accuracy and state-of-the-art AI. We utilize visual-linguistic AI to interpret architectural drawings, generate complete Bills of Quantities, and automate estimates with unprecedented speed.
+                            <strong class="text-brand-gold font-semibold">QuantisAI</strong> was forged to bridge the gap between traditional engineering accuracy and state-of-the-art AI. We utilize visual-linguistic AI to interpret architectural drawings, generate complete Bills of Quantities, and automate estimates with unprecedented speed.
                         </p>
 
                         <!-- Highlights list -->
@@ -1870,7 +1881,7 @@
                         <div class="space-y-4 pt-4">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="mail" class="w-5 h-5 text-brand-gold"></i>
-                                <span class="text-gray-300 text-sm">support@builderquoteai.com</span>
+                                <span class="text-gray-300 text-sm">support@quantisai.com</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <i data-lucide="map-pin" class="w-5 h-5 text-brand-gold"></i>
@@ -2029,7 +2040,7 @@
                 <div class="text-center md:text-left space-y-2">
                     <div id="footer-logo-container" class="h-8 flex items-center justify-center md:justify-start">
                         <!-- Logo with fallback logic -->
-                        <img id="brand-footer-logo" src="images/BuilderQuoteAI.png" alt="BuilderQuoteAI" class="h-7 w-auto object-contain" onerror="handleFooterLogoError()">
+                        <img id="brand-footer-logo" src="images/QuantisAI.png" alt="QuantisAI" class="h-7 w-auto object-contain" onerror="handleFooterLogoError()">
                     </div>
                     <p class="text-xs text-gray-500 font-light">Next-Generation AI Estimating & Bill of Quantities Platform</p>
                 </div>
@@ -2053,7 +2064,7 @@
 
             <!-- Copyright info -->
             <div class="flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 gap-4">
-                <p>&copy; <span id="current-year"></span> BuilderQuoteAI. All rights reserved.</p>
+                <p>&copy; <span id="current-year"></span> QuantisAI. All rights reserved.</p>
                 <p class="flex items-center gap-1.5 font-mono">
                     <span class="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse"></span>
                     Sovereign Estimate Engine v2.4
