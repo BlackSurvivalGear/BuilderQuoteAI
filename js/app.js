@@ -932,9 +932,27 @@ function updateProjectReviewPanelStats() {
     const pagesCountEl = document.getElementById('stat-pages-analysed');
     if (pagesCountEl) pagesCountEl.textContent = `${pagesCount} Page${pagesCount !== 1 ? 's' : ''}`;
 
+    // Fetch completed pipeline stages outputs
+    let outputs = {};
+    if (window.BQAIPipeline && window.BQAIPipeline.state && window.BQAIPipeline.state.stageOutputs) {
+        outputs = window.BQAIPipeline.state.stageOutputs;
+    }
+    if (!outputs || Object.keys(outputs).length === 0) {
+        if (window.BQAIPipeline && window.BQAIPipeline.Persistence) {
+            outputs = window.BQAIPipeline.Persistence.loadStages();
+        }
+    }
+
+    const drawingInterpreter = outputs["drawing-interpreter"];
+    const detectedRoomsCount = (drawingInterpreter && Array.isArray(drawingInterpreter.rooms)) ? drawingInterpreter.rooms.length : 0;
+    const detectedStructuralCount = (drawingInterpreter && Array.isArray(drawingInterpreter.structuralElements)) ? drawingInterpreter.structuralElements.length : 0;
+
+    const boqStage = outputs["boq-generator"];
+    const boqItemsCount = (boqStage && Array.isArray(boqStage.items)) ? boqStage.items.length : boqItems.length;
+
     // Total BOQ items generated
     const boqItemsEl = document.getElementById('stat-boq-items');
-    if (boqItemsEl) boqItemsEl.textContent = `${boqItems.length} Item${boqItems.length !== 1 ? 's' : ''}`;
+    if (boqItemsEl) boqItemsEl.textContent = `${boqItemsCount} Item${boqItemsCount !== 1 ? 's' : ''}`;
 
     // Regional Pricing & Specification Info
     const regionSelect = document.getElementById('project-region');
@@ -955,10 +973,20 @@ function updateProjectReviewPanelStats() {
     const roomsEl = document.getElementById('stat-rooms');
     const structuralEl = document.getElementById('stat-structural');
 
-    if (boqItems.length > 0) {
-        if (tradesEl) tradesEl.textContent = `${Math.min(5, boqItems.length)} Trade Packages`;
-        if (roomsEl) roomsEl.textContent = '14 Rooms';
-        if (structuralEl) structuralEl.textContent = `${Math.max(4, boqItems.length)} Elements`;
+    // Calculate unique trades count from the source list of items
+    const uniqueTrades = new Set();
+    const itemsSource = (boqStage && Array.isArray(boqStage.items)) ? boqStage.items : boqItems;
+    itemsSource.forEach(i => {
+        const tVal = i.trade || i.tradePackage || i.trade_package;
+        if (tVal) uniqueTrades.add(tVal);
+    });
+    const tradesCount = uniqueTrades.size;
+
+    // If stats are present from the pipeline, show them! Otherwise, show zero or fallbacks
+    if (tradesCount > 0 || detectedRoomsCount > 0 || detectedStructuralCount > 0 || boqItemsCount > 0) {
+        if (tradesEl) tradesEl.textContent = `${tradesCount} Trade Package${tradesCount !== 1 ? 's' : ''}`;
+        if (roomsEl) roomsEl.textContent = `${detectedRoomsCount} Room${detectedRoomsCount !== 1 ? 's' : ''}`;
+        if (structuralEl) structuralEl.textContent = `${detectedStructuralCount} Element${detectedStructuralCount !== 1 ? 's' : ''}`;
     } else {
         if (tradesEl) tradesEl.textContent = '0 Packages';
         if (roomsEl) roomsEl.textContent = '0 Rooms';
@@ -967,7 +995,8 @@ function updateProjectReviewPanelStats() {
 
     const confidenceEl = document.getElementById('stat-confidence');
     if (confidenceEl) {
-        confidenceEl.textContent = boqItems.length > 0 ? '94%' : '0%';
+        const finalConf = boqStage?.confidence ? Math.round(boqStage.confidence * 100) : (boqItemsCount > 0 ? 94 : 0);
+        confidenceEl.textContent = `${finalConf}%`;
     }
 }
 
@@ -3741,6 +3770,7 @@ async function runBQAIPipelineOrchestrator(startStageId = null) {
         }
         showToast("Pipeline Interrupted", `Stopped during ${failedStageId || 'Validation'}. Ready to retry.`);
     }
+    updateProjectReviewPanelStats();
 }
 
 // Map the old triggerOneClickQuote to the new gorgeous sequential pipeline runner!

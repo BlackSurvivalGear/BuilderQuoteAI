@@ -41,13 +41,20 @@ function updateAIDebugConsole(fields) {
 
 function getPrerequisiteStatus(stageId, uploadedFiles, completedStages) {
     const hasCategory = (cat) => uploadedFiles.some(f => f.classification === cat);
+    const hasDrawing = uploadedFiles.some(f => f.type === "drawing" || (f.classification && (f.classification.toLowerCase().includes("drawing") || f.classification.toLowerCase().includes("blueprint"))));
     const stageCompleted = (id) => completedStages[id] && completedStages[id].status !== "skipped" && completedStages[id].status !== "failed";
 
     switch (stageId) {
         case "drawing-interpreter":
+            if (!hasDrawing) {
+                return { applicable: false, reason: "No architectural drawings supplied.", required: "Architectural Drawings / Structural Drawings" };
+            }
             return { applicable: true };
 
         case "quantity-surveyor":
+            if (!hasDrawing) {
+                return { applicable: false, reason: "No architectural drawings supplied.", required: "Architectural Drawings / Structural Drawings" };
+            }
             return { applicable: true };
 
         case "boq-generator":
@@ -944,31 +951,158 @@ window.BQAIPipeline = {
                         ]
                     };
 
-                case "quantity-surveyor":
+                case "quantity-surveyor": {
+                    const diOutput = inputData["drawing-interpreter"];
+                    const rooms = diOutput?.rooms || [];
+                    const structuralElements = diOutput?.structuralElements || [];
+                    const mechanicalSystems = diOutput?.mechanicalSystems || [];
+                    const electricalSystems = diOutput?.electricalSystems || [];
+
+                    const takeoffs = [];
+                    let itemIndex = 1;
+
+                    const nextItemNo = () => {
+                        const num = itemIndex++;
+                        return `1.${num < 10 ? '0' + num : num}`;
+                    };
+
+                    structuralElements.forEach(el => {
+                        let qty = 1;
+                        let unit = "Nr";
+                        if (el.length) {
+                            qty = parseFloat(el.length) || 1;
+                            unit = "m";
+                        } else if (el.depth) {
+                            qty = parseFloat(el.depth) || 1;
+                            unit = "m3";
+                        }
+                        takeoffs.push({
+                            itemNo: nextItemNo(),
+                            description: `Structural Element: ${el.type} (${el.spec || 'standard specification'})`,
+                            unit: unit,
+                            quantity: qty,
+                            location: "Substructure / Frame",
+                            drawingReference: "S101",
+                            confidence: "High",
+                            notes: "Extracted from structural layout drawings."
+                        });
+                    });
+
+                    rooms.forEach(rm => {
+                        const areaVal = parseFloat(rm.area) || 15;
+                        takeoffs.push({
+                            itemNo: nextItemNo(),
+                            description: `Architectural Finishes: ${rm.name} floor and ceiling boarding`,
+                            unit: "m2",
+                            quantity: areaVal,
+                            location: rm.name,
+                            drawingReference: "A101",
+                            confidence: "High",
+                            notes: `Calculated from room area of ${rm.area}. Features: ${(rm.features || []).join(', ')}`
+                        });
+                    });
+
+                    mechanicalSystems.forEach(sys => {
+                        const qty = sys.loopCount || 1;
+                        takeoffs.push({
+                            itemNo: nextItemNo(),
+                            description: `Mechanical System Installation: ${sys.type}`,
+                            unit: "Set",
+                            quantity: qty,
+                            location: "Plant/Mechanical",
+                            drawingReference: "M101",
+                            confidence: "High",
+                            notes: "Extracted from M&E layouts."
+                        });
+                    });
+
+                    electricalSystems.forEach(sys => {
+                        const qty = sys.outletsCount || 1;
+                        takeoffs.push({
+                            itemNo: nextItemNo(),
+                            description: `Electrical System Layout: ${sys.type}`,
+                            unit: "Nr",
+                            quantity: qty,
+                            location: "Electrical Sub-grid",
+                            drawingReference: "E101",
+                            confidence: "High",
+                            notes: `Calculated from ${qty} identified outlets.`
+                        });
+                    });
+
+                    if (takeoffs.length === 0) {
+                        takeoffs.push({
+                            itemNo: "ASS-01",
+                            description: "AI Assumption: No specific rooms or structural elements identified in source files. Default residential standard shell assumed.",
+                            unit: "Item",
+                            quantity: 1,
+                            location: "Site-wide",
+                            drawingReference: "None",
+                            confidence: "Low",
+                            notes: "Created due to missing drawing blueprints."
+                        });
+                    }
+
                     return {
                         stage: "quantity-surveyor",
                         status: "success",
                         confidence: 0.94,
-                        takeoffs: [
-                            { itemNo: "1.01", description: "Excavate and level earthworks base", unit: "m3", quantity: 38 },
-                            { itemNo: "1.02", description: "Concrete structural pour C25 grade", unit: "m3", quantity: 15 },
-                            { itemNo: "1.03", description: "Cavity brick wall masonry partition layers", unit: "m2", quantity: 90 },
-                            { itemNo: "1.04", description: "Structural steel universal columns and reinforcements", unit: "tonne", quantity: 1.8 }
-                        ]
+                        takeoffs: takeoffs
                     };
+                }
 
-                case "boq-generator":
+                case "boq-generator": {
+                    const qsOutput = inputData["quantity-surveyor"];
+                    const takeoffs = qsOutput?.takeoffs || [];
+
+                    if (takeoffs.length === 0) {
+                        return {
+                            stage: "boq-generator",
+                            status: "success",
+                            confidence: 0.5,
+                            items: [
+                                {
+                                    itemNo: "ASS-01",
+                                    description: "AI Assumption: No measured takeoff quantities available. Standard residential ground and structural works assumed.",
+                                    unit: "Item",
+                                    quantity: 1,
+                                    trade: "Preliminaries"
+                                }
+                            ]
+                        };
+                    }
+
+                    const items = takeoffs.map((t, idx) => {
+                        let trade = "General";
+                        const desc = (t.description || "").toLowerCase();
+                        if (desc.includes("excavate") || desc.includes("earthwork") || desc.includes("ground")) trade = "Earthworks";
+                        else if (desc.includes("concrete") || desc.includes("foundation") || desc.includes("footing")) trade = "Concrete";
+                        else if (desc.includes("brick") || desc.includes("masonry") || desc.includes("wall")) trade = "Masonry";
+                        else if (desc.includes("steel") || desc.includes("column") || desc.includes("beam") || desc.includes("reinforcement")) trade = "Structural Steel";
+                        else if (desc.includes("timber") || desc.includes("carpentry") || desc.includes("wood")) trade = "Carpentry";
+                        else if (desc.includes("roof") || desc.includes("slate") || desc.includes("tile")) trade = "Roofing";
+
+                        return {
+                            itemNo: t.itemNo || `2.0${idx + 1}`,
+                            description: t.description || "Measured Work Item",
+                            unit: t.unit || "m2",
+                            quantity: typeof t.quantity === "number" ? t.quantity : parseFloat(t.quantity) || 1,
+                            trade: trade,
+                            location: t.location || "Site-wide",
+                            drawingReference: t.drawingReference || "A101",
+                            specificationReference: t.specificationReference || "Sec 3",
+                            confidence: t.confidence || "High",
+                            notes: t.notes || "Generated directly from physical dimensions takeoff."
+                        };
+                    });
+
                     return {
                         stage: "boq-generator",
                         status: "success",
                         confidence: 0.94,
-                        items: [
-                            { itemNo: "1.01", description: "Excavate and level earthworks base, average depth 1.2m", unit: "m3", quantity: 38, trade: "Earthworks" },
-                            { itemNo: "1.02", description: "Concrete structural pour C25 grade", unit: "m3", quantity: 15, trade: "Concrete" },
-                            { itemNo: "1.03", description: "Cavity brick wall masonry partition layers", unit: "m2", quantity: 90, trade: "Masonry" },
-                            { itemNo: "1.04", description: "Structural steel universal columns and framing reinforcements", unit: "tonne", quantity: 1.8, trade: "Structural Steel" }
-                        ]
+                        items: items
                     };
+                }
 
                 case "regional-pricing": {
                     const rData = window.ukRegionsData || {};
@@ -987,16 +1121,82 @@ window.BQAIPipeline = {
                 }
 
                 case "cost-estimator": {
+                    const boqOutput = inputData["boq-generator"];
+                    const boqItemsList = boqOutput?.items || [];
                     const mult = inputData.multipliers || { labour: 1.3, material: 1.25, plant: 1.3 };
-                    const rawItems = [
-                        { itemNo: "1.01", description: "Excavate and level earthworks base, average depth 1.2m", unit: "m3", quantity: 38, materialRate: 0, labourRate: 28 * mult.labour, plantRate: 19.5 * mult.plant },
-                        { itemNo: "1.02", description: "Concrete structural pour C25 grade", unit: "m3", quantity: 15, materialRate: 115 * mult.material, labourRate: 42 * mult.labour, plantRate: 6 * mult.plant },
-                        { itemNo: "1.03", description: "Cavity brick wall masonry partition layers", unit: "m2", quantity: 90, materialRate: 68 * mult.material, labourRate: 72 * mult.labour, plantRate: 3.5 * mult.plant },
-                        { itemNo: "1.04", description: "Structural steel universal columns and framing reinforcements", unit: "tonne", quantity: 1.8, materialRate: 1250 * mult.material, labourRate: 480 * mult.labour, plantRate: 320 * mult.plant }
-                    ];
+
+                    let itemsWithCosts = [];
+                    if (boqItemsList.length === 0) {
+                        itemsWithCosts = [
+                            {
+                                itemNo: "ASS-01",
+                                description: "AI Assumption: Cost estimate calculated based on general specification parameters due to missing BOQ items.",
+                                unit: "Item",
+                                quantity: 1,
+                                materialRate: 5000 * mult.material,
+                                labourRate: 4000 * mult.labour,
+                                plantRate: 1000 * mult.plant,
+                                trade: "Preliminaries"
+                            }
+                        ];
+                    } else {
+                        itemsWithCosts = boqItemsList.map(item => {
+                            let materialRate = 0;
+                            let labourRate = 0;
+                            let plantRate = 0;
+
+                            const desc = (item.description || "").toLowerCase();
+                            if (desc.includes("excavate") || desc.includes("earthwork")) {
+                                materialRate = 0;
+                                labourRate = 28 * mult.labour;
+                                plantRate = 19.5 * mult.plant;
+                            } else if (desc.includes("concrete") || desc.includes("foundation")) {
+                                materialRate = 115 * mult.material;
+                                labourRate = 42 * mult.labour;
+                                plantRate = 6 * mult.plant;
+                            } else if (desc.includes("brick") || desc.includes("masonry") || desc.includes("wall")) {
+                                materialRate = 68 * mult.material;
+                                labourRate = 72 * mult.labour;
+                                plantRate = 3.5 * mult.plant;
+                            } else if (desc.includes("steel") || desc.includes("column") || desc.includes("beam")) {
+                                materialRate = 1250 * mult.material;
+                                labourRate = 480 * mult.labour;
+                                plantRate = 320 * mult.plant;
+                            } else if (desc.includes("timber") || desc.includes("carpentry") || desc.includes("roof") || desc.includes("softwood")) {
+                                materialRate = 150 * mult.material;
+                                labourRate = 95 * mult.labour;
+                                plantRate = 5 * mult.plant;
+                            } else if (desc.includes("slate") || desc.includes("tile")) {
+                                materialRate = 46 * mult.material;
+                                labourRate = 34 * mult.labour;
+                                plantRate = 12 * mult.plant;
+                            } else {
+                                materialRate = 50 * mult.material;
+                                labourRate = 40 * mult.labour;
+                                plantRate = 10 * mult.plant;
+                            }
+
+                            if (item.itemNo && item.itemNo.startsWith("ASS")) {
+                                materialRate = 100 * mult.material;
+                                labourRate = 80 * mult.labour;
+                                plantRate = 20 * mult.plant;
+                            }
+
+                            return {
+                                itemNo: item.itemNo,
+                                description: item.description,
+                                unit: item.unit,
+                                quantity: item.quantity,
+                                materialRate,
+                                labourRate,
+                                plantRate,
+                                trade: item.trade || "General"
+                            };
+                        });
+                    }
 
                     let rawSubtotal = 0;
-                    rawItems.forEach(i => {
+                    itemsWithCosts.forEach(i => {
                         rawSubtotal += i.quantity * (i.materialRate + i.labourRate + i.plantRate);
                     });
                     const wasteCost = rawSubtotal * 0.05;
@@ -1006,7 +1206,7 @@ window.BQAIPipeline = {
                     return {
                         stage: "cost-estimator",
                         status: "success",
-                        itemsWithCosts: rawItems,
+                        itemsWithCosts: itemsWithCosts,
                         subtotal: rawSubtotal,
                         wasteCost,
                         overheads,
@@ -1052,7 +1252,8 @@ window.BQAIPipeline = {
 
                 case "quotation-generator": {
                     const quoteNo = inputData.quoteNumber || "BQ-2024-991";
-                    const grandTotal = inputData.grandTotal || 245000;
+                    const estOutput = inputData["cost-estimator"];
+                    const grandTotal = estOutput?.grandTotal || inputData.grandTotal || 245000;
                     return {
                         stage: "quotation-generator",
                         status: "success",
