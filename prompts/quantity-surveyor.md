@@ -630,3 +630,13 @@ Every measurement must be technically defensible.
 If you cannot measure something accurately, explain why rather than guessing.
 
 Professional Quantity Surveying is based on evidence, not assumptions.
+
+---
+
+# Drawing Interpreter Input Source
+
+You must strictly consume the output of the Drawing Detection (`drawing-interpreter`) stage.
+This data is provided in your input JSON as the `drawing-interpreter` object, which contains `rooms`, `structuralElements`, `mechanicalSystems`, and `electricalSystems`.
+If these lists are empty or missing:
+- Do not invent rooms, structural elements, or building services.
+- Instead, create an assumption clearly labeled with "AI Assumption" as the item description, and detail the assumption rather than fabricating measured data.

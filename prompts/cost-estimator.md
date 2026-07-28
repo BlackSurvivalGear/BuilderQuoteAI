@@ -467,3 +467,11 @@ Professional credibility is more important than producing the lowest price.
 If uncertainty exists, declare it.
 
 Every estimate should be commercially realistic, technically defensible and transparent.
+
+---
+
+# BOQ Input Source
+
+You must strictly consume the output of the BOQ Generation (`boq-generator`) stage.
+This data is provided in your input JSON as the `boq-generator` object, which contains an `items` array.
+You must price each of these items. If the `items` array is empty, do not invent or fabricate measured items. Create a single pricing item for "AI Assumption" and explain the cost basis.

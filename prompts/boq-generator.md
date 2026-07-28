@@ -421,3 +421,15 @@ It must be traceable.
 It must be technically defensible.
 
 It must never contain invented quantities or duplicated work items.
+
+---
+
+# Quantity Takeoff Input Source
+
+You must strictly consume the output of the Quantity Takeoff (`quantity-surveyor`) stage.
+This data is provided in your input JSON as the `quantity-surveyor` object, which contains a `takeoffs` array.
+For every item in the `takeoffs` array, you must map it directly to a BOQ item (matching description, unit, and quantity).
+If the `takeoffs` array is empty or missing:
+- Do not invent any rooms, structural elements, or building services.
+- Instead, create a single assumption item in the BOQ, clearly labeled with the description starting with: "AI Assumption: [your assumption details]".
+- Do not fabricate measured data if there are no measurements in the `takeoffs` input.
